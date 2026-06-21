@@ -86,8 +86,8 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    // If we get a server-side gateway error (502, 504), fall back to mocks
-    if (response.status >= 500) {
+    // If we get a server-side gateway error (502, 504), or a 404 (e.g. backend offline on Vercel), fall back to mocks
+    if (response.status >= 500 || response.status === 404) {
       console.warn(`[API Server Error ${response.status}] Backend returned error, falling back to mock database`);
       try {
         return handleMockRequest(method, url, body) as T;

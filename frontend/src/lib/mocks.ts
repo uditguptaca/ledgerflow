@@ -133,6 +133,13 @@ export const handleMockRequest = (method: string, url: string, body?: any): any 
   }
 
   if (cleanUrl === '/v1/auth/me') {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_token') : null;
+    if (token && token.startsWith('mock-token-')) {
+      const email = token.replace('mock-token-', '');
+      if (mockUsers[email as keyof typeof mockUsers]) {
+        return mockUsers[email as keyof typeof mockUsers];
+      }
+    }
     return mockUsers['sarah@northstar.demo']; // Default fallback profile
   }
 
