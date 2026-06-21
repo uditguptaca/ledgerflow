@@ -81,7 +81,7 @@ export default function SignupPage() {
       }
 
       toast.success('Account created! Welcome to LedgerFlow.');
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       toast.error(err.message || 'Onboarding failed.');
     } finally {
