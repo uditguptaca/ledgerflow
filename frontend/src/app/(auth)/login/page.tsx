@@ -37,6 +37,8 @@ export default function LoginPage() {
       // Let CompanyProvider automatically load and store the correct company_id from /v1/companies
       localStorage.removeItem('ledgerflow_company_id');
       
+      await refreshUser();
+      
       toast.success('Successfully logged in!');
       window.location.href = '/dashboard';
     } catch (err: any) {
