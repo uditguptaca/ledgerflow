@@ -129,8 +129,13 @@ export default function NewInvoicePage() {
             <input
               type="date"
               required
+              autoComplete="off"
               value={formValues.date}
-              onChange={(e) => setFormValues(prev => ({ ...prev, date: e.target.value }))}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setFormValues(prev => ({ ...prev, date: e.target.value }));
+                }
+              }}
               className="input-base font-mono"
             />
           </div>
@@ -142,8 +147,13 @@ export default function NewInvoicePage() {
             <input
               type="date"
               required
+              autoComplete="off"
               value={formValues.dueDate}
-              onChange={(e) => setFormValues(prev => ({ ...prev, dueDate: e.target.value }))}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setFormValues(prev => ({ ...prev, dueDate: e.target.value }));
+                }
+              }}
               className="input-base font-mono"
             />
           </div>
