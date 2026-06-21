@@ -22,6 +22,7 @@ import { AuditModule } from './audit/audit.module';
 import { ExportModule } from './export/export.module';
 import { DocumentModule } from './document/document.module';
 import { NotificationModule } from './notification/notification.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -48,6 +49,8 @@ import { NotificationModule } from './notification/notification.module';
     ExportModule,
     DocumentModule,
     NotificationModule,
+    SuperAdminModule,
   ],
 })
 export class AppModule {}
+

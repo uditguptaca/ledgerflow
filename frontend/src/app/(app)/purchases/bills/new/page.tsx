@@ -1,25 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import LineItemEditor, { LineItem } from '@/components/forms/LineItemEditor';
-
-const MOCK_VENDORS = [
-  { id: '1', name: 'Amazon Web Services' },
-  { id: '2', name: 'WeWork Office Space' },
-  { id: '3', name: 'Google Cloud Platform' },
-];
+import { api } from '@/lib/api';
 
 export default function NewBillPage() {
   const router = useRouter();
-  const [vendorId, setVendorId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState('');
-  const [reference, setReference] = useState('');
+  const [formValues, setFormValues] = useState({
+    vendorId: '',
+    date: new Date().toISOString().split('T')[0],
+    dueDate: new Date().toISOString().split('T')[0],
+    reference: '',
+  });
   const [loading, setLoading] = useState(false);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    async function loadVendors() {
+      try {
+        const data = await api.get<any[]>('/v1/vendors');
+        if (data && Array.isArray(data)) {
+          setVendors(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load vendors from backend:', err);
+      }
+    }
+    loadVendors();
+  }, []);
 
   const [items, setItems] = useState<LineItem[]>([
     { id: '1', accountId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0, debit: 0, credit: 0 },
@@ -28,7 +40,7 @@ export default function NewBillPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!vendorId) {
+    if (!formValues.vendorId) {
       toast.error('Please select a vendor.');
       return;
     }
@@ -45,11 +57,29 @@ export default function NewBillPage() {
 
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const payload = {
+        vendorId: formValues.vendorId,
+        vendorInvoiceNo: formValues.reference || undefined,
+        date: `${formValues.date}T00:00:00Z`,
+        dueDate: formValues.dueDate ? `${formValues.dueDate}T00:00:00Z` : `${formValues.date}T00:00:00Z`,
+        notes: formValues.reference || undefined,
+        lines: items.map((item) => ({
+          accountId: item.accountId,
+          description: item.description || undefined,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          taxCodeId: item.taxCodeId || undefined,
+        })),
+      };
+
+      const newBill = await api.post<{ id: string }>('/v1/bills', payload);
+      await api.post(`/v1/bills/${newBill.id}/post`);
+
       toast.success('Bill successfully recorded and posted to Accounts Payable.');
       router.push('/purchases/bills');
-    } catch {
-      toast.error('Failed to record bill.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to record bill.');
     } finally {
       setLoading(false);
     }
@@ -80,12 +110,12 @@ export default function NewBillPage() {
             </label>
             <select
               required
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
+              value={formValues.vendorId}
+              onChange={(e) => setFormValues(prev => ({ ...prev, vendorId: e.target.value }))}
               className="input-base appearance-none font-semibold text-slate-800"
             >
               <option value="">Select a vendor...</option>
-              {MOCK_VENDORS.map((v) => (
+              {vendors.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}
                 </option>
@@ -100,8 +130,8 @@ export default function NewBillPage() {
             <input
               type="date"
               required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={formValues.date}
+              onChange={(e) => setFormValues(prev => ({ ...prev, date: e.target.value }))}
               className="input-base font-mono"
             />
           </div>
@@ -113,8 +143,8 @@ export default function NewBillPage() {
             <input
               type="date"
               required
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={formValues.dueDate}
+              onChange={(e) => setFormValues(prev => ({ ...prev, dueDate: e.target.value }))}
               className="input-base font-mono"
             />
           </div>
@@ -126,8 +156,8 @@ export default function NewBillPage() {
             <input
               type="text"
               placeholder="e.g. AWS-890A"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
+              value={formValues.reference}
+              onChange={(e) => setFormValues(prev => ({ ...prev, reference: e.target.value }))}
               className="input-base font-mono"
             />
           </div>

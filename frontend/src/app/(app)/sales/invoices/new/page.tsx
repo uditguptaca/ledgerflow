@@ -10,10 +10,12 @@ import { api } from '@/lib/api';
 
 export default function NewInvoicePage() {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState('');
-  const [reference, setReference] = useState('');
+  const [formValues, setFormValues] = useState({
+    customerId: '',
+    date: new Date().toISOString().split('T')[0],
+    dueDate: new Date().toISOString().split('T')[0],
+    reference: '',
+  });
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
 
@@ -39,7 +41,7 @@ export default function NewInvoicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerId) {
+    if (!formValues.customerId) {
       toast.error('Please select a customer.');
       return;
     }
@@ -57,10 +59,10 @@ export default function NewInvoicePage() {
     try {
       setLoading(true);
       const payload = {
-        customerId,
-        date: `${date}T00:00:00Z`,
-        dueDate: dueDate ? `${dueDate}T00:00:00Z` : `${date}T00:00:00Z`,
-        notes: reference,
+        customerId: formValues.customerId,
+        date: `${formValues.date}T00:00:00Z`,
+        dueDate: formValues.dueDate ? `${formValues.dueDate}T00:00:00Z` : `${formValues.date}T00:00:00Z`,
+        notes: formValues.reference,
         lines: items.map((item) => ({
           accountId: item.accountId,
           description: item.description || undefined,
@@ -70,7 +72,8 @@ export default function NewInvoicePage() {
         })),
       };
 
-      await api.post('/v1/invoices', payload);
+      const invoice = await api.post<{ id: string }>('/v1/invoices', payload);
+      await api.post(`/v1/invoices/${invoice.id}/post`);
       toast.success('Invoice successfully created.');
       router.push('/sales/invoices');
     } catch (err: any) {
@@ -106,8 +109,8 @@ export default function NewInvoicePage() {
             </label>
             <select
               required
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
+              value={formValues.customerId}
+              onChange={(e) => setFormValues(prev => ({ ...prev, customerId: e.target.value }))}
               className="input-base appearance-none font-semibold text-slate-800"
             >
               <option value="">Select a customer...</option>
@@ -126,8 +129,8 @@ export default function NewInvoicePage() {
             <input
               type="date"
               required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={formValues.date}
+              onChange={(e) => setFormValues(prev => ({ ...prev, date: e.target.value }))}
               className="input-base font-mono"
             />
           </div>
@@ -139,8 +142,8 @@ export default function NewInvoicePage() {
             <input
               type="date"
               required
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={formValues.dueDate}
+              onChange={(e) => setFormValues(prev => ({ ...prev, dueDate: e.target.value }))}
               className="input-base font-mono"
             />
           </div>
@@ -152,8 +155,8 @@ export default function NewInvoicePage() {
             <input
               type="text"
               placeholder="e.g. PO-8902"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
+              value={formValues.reference}
+              onChange={(e) => setFormValues(prev => ({ ...prev, reference: e.target.value }))}
               className="input-base font-mono"
             />
           </div>

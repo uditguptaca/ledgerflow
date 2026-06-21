@@ -36,6 +36,7 @@ export default function ChartOfAccountsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   // Form states
   const [code, setCode] = useState('');
@@ -43,6 +44,23 @@ export default function ChartOfAccountsPage() {
   const [type, setType] = useState<Account['type']>('asset');
   const [desc, setDesc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const openEditModal = (acc: Account) => {
+    setEditingAccount(acc);
+    setCode(acc.code);
+    setName(acc.name);
+    setType(acc.type);
+    setDesc(acc.description || '');
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingAccount(null);
+    setCode('');
+    setName('');
+    setType('asset');
+    setDesc('');
+  };
 
   const fetchAccounts = async () => {
     try {
@@ -122,17 +140,35 @@ export default function ChartOfAccountsPage() {
       });
 
       toast.success(`Account ${code} - ${name} added.`);
-      
-      // Reset Form
-      setCode('');
-      setName('');
-      setType('asset');
-      setDesc('');
-      setIsModalOpen(false);
-      
+      handleCloseModal();
       fetchAccounts();
     } catch (err: any) {
       toast.error(err.message || 'Failed to create account');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+    if (!name) {
+      toast.error('Account Name is required.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await api.patch(`/v1/accounting/accounts/${editingAccount.id}`, {
+        name,
+        description: desc,
+      });
+
+      toast.success(`Account ${code} - ${name} updated.`);
+      handleCloseModal();
+      fetchAccounts();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update account');
     } finally {
       setIsSubmitting(false);
     }
@@ -213,7 +249,11 @@ export default function ChartOfAccountsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredAccounts.map((acc) => (
-                  <tr key={acc.id} className="hover:bg-slate-50/40 transition-colors">
+                  <tr
+                    key={acc.id}
+                    onClick={() => openEditModal(acc)}
+                    className="hover:bg-slate-50/40 transition-colors cursor-pointer"
+                  >
                     <td className="table-cell font-mono font-bold text-slate-500">{acc.code}</td>
                     <td className="table-cell font-medium text-slate-900">{acc.name}</td>
                     <td className="table-cell">
@@ -240,12 +280,14 @@ export default function ChartOfAccountsPage() {
         )}
       </div>
 
-      {/* Add Account Modal */}
-      {isModalOpen && (
+      {/* Add / Edit Account Modal */}
+      {(isModalOpen || !!editingAccount) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 relative animate-scale-in">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Add Account</h3>
-            <form onSubmit={handleAddAccount} className="space-y-4">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              {editingAccount ? 'Edit Account' : 'Add Account'}
+            </h3>
+            <form onSubmit={editingAccount ? handleUpdateAccount : handleAddAccount} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Account Code
@@ -253,10 +295,11 @@ export default function ChartOfAccountsPage() {
                 <input
                   type="text"
                   required
+                  disabled={!!editingAccount}
                   placeholder="e.g. 1010"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="input-base font-mono"
+                  className="input-base font-mono disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200"
                 />
               </div>
 
@@ -280,8 +323,9 @@ export default function ChartOfAccountsPage() {
                 </label>
                 <select
                   value={type}
+                  disabled={!!editingAccount}
                   onChange={(e) => setType(e.target.value as Account['type'])}
-                  className="input-base appearance-none cursor-pointer"
+                  className="input-base appearance-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-450 disabled:border-slate-200"
                 >
                   <option value="asset">Asset</option>
                   <option value="liability">Liability</option>
@@ -307,7 +351,7 @@ export default function ChartOfAccountsPage() {
                 <button
                   type="button"
                   disabled={isSubmitting}
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 py-2 font-semibold"
                 >
                   Cancel
@@ -317,7 +361,7 @@ export default function ChartOfAccountsPage() {
                   disabled={isSubmitting}
                   className="flex-1 btn-base bg-brand-600 hover:bg-brand-700 text-white py-2 font-semibold shadow-soft"
                 >
-                  {isSubmitting ? 'Saving...' : 'Save Account'}
+                  {isSubmitting ? 'Saving...' : editingAccount ? 'Update Account' : 'Save Account'}
                 </button>
               </div>
             </form>

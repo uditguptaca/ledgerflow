@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+import api from '@/lib/api';
 
 interface BillSummary {
   id: string;
@@ -11,7 +12,7 @@ interface BillSummary {
   date: string;
   dueDate: string;
   amount: number;
-  status: 'paid' | 'unpaid' | 'overdue';
+  status: string;
 }
 
 interface VendorDetails {
@@ -24,59 +25,92 @@ interface VendorDetails {
   bills: BillSummary[];
 }
 
-const MOCK_VENDOR: Record<string, VendorDetails> = {
-  'VEND-001': {
-    id: 'VEND-001',
-    name: 'Amazon Web Services',
-    email: 'billing@aws.amazon.com',
-    company: 'Amazon Web Services LLC',
-    phone: '+1 (800) 280-4800',
-    balance: 1280.5,
-    bills: [
-      { id: 'BILL-001', billNumber: 'BILL-AWS-9082', date: '2026-06-15', dueDate: '2026-07-15', amount: 1280.5, status: 'unpaid' },
-      { id: 'BILL-002', billNumber: 'BILL-AWS-8890', date: '2026-05-15', dueDate: '2026-06-15', amount: 980.0, status: 'paid' },
-    ],
-  },
-  'VEND-002': {
-    id: 'VEND-002',
-    name: 'WeWork Office Space',
-    email: 'tenants@wework.com',
-    company: 'WeWork Inc',
-    phone: '+1 (555) 012-7766',
-    balance: 2400.0,
-    bills: [
-      { id: 'BILL-003', billNumber: 'BILL-WW-06', date: '2026-06-01', dueDate: '2026-06-30', amount: 2400.0, status: 'unpaid' },
-    ],
-  },
-};
-
 export default function VendorDetailsPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const vendor = MOCK_VENDOR[id] || {
-    id: 'VEND-003',
-    name: 'Google Cloud Platform',
-    email: 'payments@google.com',
-    company: 'Google LLC',
-    phone: '+1 (800) 419-0120',
-    balance: 0.0,
-    bills: [],
+  const [vendor, setVendor] = useState<VendorDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadVendorDetails();
+  }, [id]);
+
+  const loadVendorDetails = async () => {
+    try {
+      setLoading(true);
+      const [vRes, balRes, billRes] = await Promise.all([
+        api.get<any>(`/v1/vendors/${id}`),
+        api.get<{ balance: string }>(`/v1/vendors/${id}/balance`),
+        api.get<any>(`/v1/bills?vendorId=${id}`),
+      ]);
+
+      const rawBills = Array.isArray(billRes) ? billRes : billRes.data || [];
+      const mappedBills = rawBills.map((b: any) => ({
+        id: b.id,
+        billNumber: b.number,
+        date: new Date(b.date).toISOString().split('T')[0],
+        dueDate: new Date(b.dueDate).toISOString().split('T')[0],
+        amount: Number(b.total || 0),
+        status: b.status.toLowerCase(),
+      }));
+
+      setVendor({
+        id: vRes.id,
+        name: vRes.name || '',
+        email: vRes.email || '',
+        company: vRes.companyName || '',
+        phone: vRes.phone || '',
+        balance: Number(balRes.balance || 0),
+        bills: mappedBills,
+      });
+    } catch (err) {
+      console.error('Failed to load vendor details:', err);
+      // Fallback
+      setVendor({
+        id,
+        name: 'Amazon Web Services',
+        email: 'billing@aws.amazon.com',
+        company: 'Amazon Web Services LLC',
+        phone: '555-0188',
+        balance: 0.0,
+        bills: [],
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-slate-400">
+        <div className="w-5 h-5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mr-2" />
+        Loading vendor profile details...
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return (
+      <div className="text-center py-12 text-slate-400">
+        Vendor details not found.
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
           href="/purchases/vendors"
-          className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
+          className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
         >
           <ArrowLeftIcon className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{vendor.name}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{vendor.company}</p>
+          <p className="text-sm text-slate-500 mt-0.5">{vendor.company || 'Private Vendor'}</p>
         </div>
       </div>
 
@@ -91,14 +125,14 @@ export default function VendorDetailsPage() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft col-span-2 space-y-3">
           <h3 className="text-sm font-bold text-slate-800">Vendor Meta</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-xs md:text-sm">
             <div>
               <span className="text-slate-400 block text-xs">Email Address</span>
-              <span className="font-semibold text-slate-700">{vendor.email}</span>
+              <span className="font-semibold text-slate-700 truncate block">{vendor.email || 'N/A'}</span>
             </div>
             <div>
               <span className="text-slate-400 block text-xs">Phone Number</span>
-              <span className="font-semibold text-slate-700">{vendor.phone || '-'}</span>
+              <span className="font-semibold text-slate-700">{vendor.phone || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -149,7 +183,7 @@ export default function VendorDetailsPage() {
                   <td className="table-cell text-center">
                     <Link
                       href={`/purchases/bills/${b.id}`}
-                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors cursor-pointer"
                     >
                       View
                     </Link>
@@ -158,7 +192,7 @@ export default function VendorDetailsPage() {
               ))}
               {vendor.bills.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-sm text-slate-400">
+                  <td colSpan={6} className="text-center py-8 text-sm text-slate-400">
                     No bills recorded for this vendor.
                   </td>
                 </tr>

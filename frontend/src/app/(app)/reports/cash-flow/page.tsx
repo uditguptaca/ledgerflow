@@ -8,8 +8,8 @@ import api from '@/lib/api';
 export default function CashFlowPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('2025-01-01');
-  const [endDate, setEndDate] = useState('2025-01-31');
+  const [startDate, setStartDate] = useState('2026-01-01');
+  const [endDate, setEndDate] = useState('2026-06-21');
 
   const fetchReport = () => {
     setLoading(true);

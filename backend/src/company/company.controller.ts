@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -63,5 +64,17 @@ export class CompanyController {
     @Body() dto: UpdateCompanyDto,
   ) {
     return this.companyService.updateCompany(companyId, userId, dto);
+  }
+
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Company-Id', required: true, description: 'Company Context ID' })
+  @UseGuards(JwtAuthGuard, CompanyGuard)
+  @Delete(':companyId')
+  @ApiOperation({ summary: 'Delete a company (OWNER or ADMIN only)' })
+  async deleteCompany(
+    @Param('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.companyService.deleteCompany(companyId, userId);
   }
 }

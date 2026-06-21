@@ -9,6 +9,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { Decimal } from 'decimal.js';
 import { parse } from 'csv-parse/sync';
 import { v4 as uuidv4 } from 'uuid';
+import { generateUniqueNumber } from '../common/number-generator';
 import {
   CreateBankAccountDto,
   CategorizeTransactionDto,
@@ -402,13 +403,7 @@ export class BankingService {
         throw new BadRequestException('Journal entry is not balanced – internal error');
       }
 
-      // Get next journal number
-      const company = await tx.company.update({
-        where: { id: companyId },
-        data: { nextJournalNum: { increment: 1 } },
-      });
-
-      const journalNumber = `${company.journalPrefix}-${String(company.nextJournalNum - 1).padStart(6, '0')}`;
+      const journalNumber = await generateUniqueNumber(tx, companyId, 'JOURNAL', 6);
 
       // Create journal entry
       const journalEntry = await tx.journalEntry.create({

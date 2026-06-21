@@ -9,6 +9,8 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { AccountService } from './account.service';
 import Decimal from 'decimal.js';
 import { Prisma } from '@prisma/client';
+import { generateUniqueNumber } from '../common/number-generator';
+
 
 // ── Interfaces ───────────────────────────────────────────
 
@@ -229,13 +231,7 @@ export class PostingService {
     try {
       const runInTx = async (tx: Prisma.TransactionClient) => {
         // Step 6: Generate number
-        const company = await tx.company.update({
-          where: { id: companyId },
-          data: { nextJournalNum: { increment: 1 } },
-        });
-
-        const journalNum = company.nextJournalNum - 1; // We incremented, so subtract 1
-        const number = `${company.journalPrefix}-${String(journalNum).padStart(4, '0')}`;
+        const number = await generateUniqueNumber(tx, companyId, 'JOURNAL');
 
         // Step 7: Create JournalEntry
         const journalEntry = await tx.journalEntry.create({
@@ -368,13 +364,7 @@ export class PostingService {
       // Create the reversal journal via the posting engine
       // We need to do this within the transaction manually since
       // postJournal creates its own transaction
-      const company = await tx.company.update({
-        where: { id: original.companyId },
-        data: { nextJournalNum: { increment: 1 } },
-      });
-
-      const journalNum = company.nextJournalNum - 1;
-      const number = `${company.journalPrefix}-${String(journalNum).padStart(4, '0')}`;
+      const number = await generateUniqueNumber(tx, original.companyId, 'JOURNAL');
 
       const reversalEntry = await tx.journalEntry.create({
         data: {

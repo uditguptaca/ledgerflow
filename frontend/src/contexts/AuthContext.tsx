@@ -8,6 +8,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   role?: string;
   avatarUrl?: string;
 }
@@ -39,7 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Fetch current user from profile endpoint
       const userData = await api.get<User>('/v1/auth/me');
-      setUser(userData);
+      const name = userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;
+      setUser({ ...userData, name });
     } catch (err) {
       console.error('Failed to load user profile:', err);
       if (err instanceof ApiError && err.status === 401) {
@@ -57,7 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (token: string, userData: User) => {
     saveToken(token);
-    setUser(userData);
+    const name = userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;
+    setUser({ ...userData, name });
   };
 
   const logout = () => {

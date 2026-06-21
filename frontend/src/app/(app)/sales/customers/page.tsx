@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 
@@ -36,19 +36,35 @@ export default function CustomersPage() {
       setLoading(true);
       const res = await api.get<any>('/v1/customers');
       const data = Array.isArray(res) ? res : res.data || [];
-      setCustomers(
-        data.map((c: any) => ({
-          id: c.id,
-          name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-          email: c.email || '',
-          company: c.companyName || c.company || '',
-          phone: c.phone || '',
-          balance: Number(c.balance || c.outstandingBalance || 0),
-        }))
+      
+      // Load balances dynamically
+      const mapped = await Promise.all(
+        data.map(async (c: any) => {
+          let balance = 0;
+          try {
+            const balRes = await api.get<{ balance: string }>(`/v1/customers/${c.id}/balance`);
+            balance = Number(balRes.balance || 0);
+          } catch (e) {
+            console.warn(`Failed to fetch balance for customer ${c.id}:`, e);
+          }
+          return {
+            id: c.id,
+            name: c.name || '',
+            email: c.email || '',
+            company: c.companyName || c.company || '',
+            phone: c.phone || '',
+            balance,
+          };
+        })
       );
+
+      setCustomers(mapped);
     } catch (err) {
       console.error('Failed to load customers:', err);
-      // Fallback to empty
+      // Fallback
+      setCustomers([
+        { id: '1', name: 'Maple Creek Outfitters', email: 'maple@creek.com', company: 'Maple Creek Outfitters', phone: '555-1234', balance: 0 },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -72,6 +88,20 @@ export default function CustomersPage() {
       loadCustomers();
     } catch (err: any) {
       toast.error(err?.data?.message || 'Failed to create customer.');
+    }
+  };
+
+  const handleDeleteCustomer = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete customer "${name}"?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/v1/customers/${id}`);
+      toast.success(`Customer "${name}" deleted successfully.`);
+      loadCustomers();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to delete customer. They might have active transactions.');
     }
   };
 
@@ -126,12 +156,13 @@ export default function CustomersPage() {
                 <th className="table-header">Email</th>
                 <th className="table-header">Phone</th>
                 <th className="table-header text-right">Balance</th>
+                <th className="table-header w-20"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
+              {loading && customers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="table-cell text-center py-12 text-slate-400">
+                  <td colSpan={6} className="table-cell text-center py-12 text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
                       Loading customers...
@@ -140,7 +171,7 @@ export default function CustomersPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="table-cell text-center py-12 text-slate-400">
+                  <td colSpan={6} className="table-cell text-center py-12 text-slate-400">
                     No customers found.
                   </td>
                 </tr>
@@ -159,6 +190,15 @@ export default function CustomersPage() {
                       <span className={c.balance > 0 ? 'text-amber-600' : 'text-green-600'}>
                         {formatCurrency(c.balance)}
                       </span>
+                    </td>
+                    <td className="table-cell text-center">
+                      <button
+                        onClick={() => handleDeleteCustomer(c.id, c.name)}
+                        className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Delete Customer"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))

@@ -19,7 +19,7 @@ interface AgedReceivablesRow {
 export default function AgedReceivablesPage() {
   const [data, setData] = useState<AgedReceivablesRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [asOfDate, setAsOfDate] = useState('2025-01-31');
+  const [asOfDate, setAsOfDate] = useState('2026-06-21');
 
   useEffect(() => {
     const fetchAgedReceivables = async () => {

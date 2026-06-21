@@ -23,6 +23,7 @@ export default function InvoiceDetailsPage() {
   const [bankAccountId, setBankAccountId] = useState('');
   const [paymentRef, setPaymentRef] = useState('');
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
 
   const fetchInvoice = () => {
     setLoading(true);
@@ -114,10 +115,11 @@ export default function InvoiceDetailsPage() {
     }
   };
 
-  const handleVoid = async () => {
-    if (!confirm('Are you sure you want to void this invoice? This will reverse all ledger entries.')) {
-      return;
-    }
+  const handleVoid = () => {
+    setShowVoidConfirm(true);
+  };
+
+  const executeVoid = async () => {
     try {
       setActionLoading(true);
       await api.post(`/v1/invoices/${id}/void`);
@@ -208,7 +210,8 @@ export default function InvoiceDetailsPage() {
             </button>
           )}
           <button
-            onClick={() => window.print()}
+            type="button"
+            onClick={(e) => { e.preventDefault(); window.print(); }}
             className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
           >
             Print Invoice
@@ -382,6 +385,39 @@ export default function InvoiceDetailsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showVoidConfirm && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-6 animate-scale-in">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Void Invoice</h3>
+              <p className="text-sm text-slate-500 mt-2">
+                Are you sure you want to void this invoice? This will reverse all ledger entries and cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowVoidConfirm(false)}
+                className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVoidConfirm(false);
+                  executeVoid();
+                }}
+                disabled={actionLoading}
+                className="btn-base bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 text-sm font-semibold shadow-soft"
+              >
+                {actionLoading ? 'Voiding...' : 'Void Invoice'}
+              </button>
+            </div>
           </div>
         </div>
       )}

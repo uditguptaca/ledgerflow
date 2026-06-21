@@ -77,9 +77,17 @@ export default function AccountPicker({
     async function fetchAccounts() {
       try {
         setLoading(true);
-        const data = await api.get<Account[]>('/v1/accounting/accounts');
+        const data = await api.get<any[]>('/v1/accounting/accounts');
         if (data && Array.isArray(data)) {
-          setAccounts(data);
+          const normalized: Account[] = data.map((acc) => {
+            let t = String(acc.type || '').toLowerCase();
+            if (t === 'income') t = 'revenue';
+            return {
+              ...acc,
+              type: t as Account['type'],
+            };
+          });
+          setAccounts(normalized);
         }
       } catch (err) {
         console.warn('Could not fetch accounts from backend, using defaults:', err);
@@ -100,22 +108,34 @@ export default function AccountPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const getLabel = (type: any) => {
+    const t = String(type || '').toLowerCase() as Account['type'];
+    return TYPE_LABELS[t] || String(type || '');
+  };
+
+  const getColorClass = (type: any) => {
+    const t = String(type || '').toLowerCase() as Account['type'];
+    return TYPE_COLORS[t] || 'bg-slate-50 text-slate-700 border-slate-200';
+  };
+
   const selectedAccount = accounts.find((a) => a.id === selectedId);
 
   const filteredAccounts = accounts.filter((account) => {
+    if (!account) return false;
     const term = search.toLowerCase();
-    return (
-      account.name.toLowerCase().includes(term) ||
-      account.code.includes(term) ||
-      account.type.toLowerCase().includes(term)
-    );
+    const name = String(account.name || '').toLowerCase();
+    const code = String(account.code || '').toLowerCase();
+    const type = String(account.type || '').toLowerCase();
+    return name.includes(term) || code.includes(term) || type.includes(term);
   });
 
   const groupedAccounts = filteredAccounts.reduce((acc, account) => {
-    if (!acc[account.type]) {
-      acc[account.type] = [];
+    if (!account) return acc;
+    const t = String(account.type || '').toLowerCase() as Account['type'];
+    if (!acc[t]) {
+      acc[t] = [];
     }
-    acc[account.type].push(account);
+    acc[t].push(account);
     return acc;
   }, {} as Record<Account['type'], Account[]>);
 
@@ -144,8 +164,8 @@ export default function AccountPicker({
           <span className="flex items-center gap-2">
             <span className="font-mono text-slate-500 font-semibold">{selectedAccount.code}</span>
             <span className="font-medium text-slate-800">{selectedAccount.name}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${TYPE_COLORS[selectedAccount.type]}`}>
-              {TYPE_LABELS[selectedAccount.type]}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${getColorClass(selectedAccount.type)}`}>
+              {getLabel(selectedAccount.type)}
             </span>
           </span>
         ) : (

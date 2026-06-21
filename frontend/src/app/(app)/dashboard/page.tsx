@@ -27,17 +27,45 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activePeriodText, setActivePeriodText] = useState('2025 Active');
+  const [activeMonthYearLabel, setActiveMonthYearLabel] = useState('Jan 2025');
+  const [activeMonthEndLabel, setActiveMonthEndLabel] = useState('Jan 31');
+  const [chartDataState, setChartDataState] = useState<any[]>([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        // Load P&L for Jan 2025
-        const pl = await api.get<any>('/v1/reports/profit-loss?startDate=2025-01-01T00:00:00Z&endDate=2025-01-31T23:59:59Z');
-        // Load Balance Sheet for Jan 2025
-        const bs = await api.get<any>('/v1/reports/balance-sheet?asOfDate=2025-01-31T23:59:59Z');
-        // Load recent journals
+        // 1. Load recent journals first to determine active period
         const journals = await api.get<any>('/v1/accounting/journals?limit=5');
+        const txs = journals.data || [];
+        setTransactions(txs);
+
+        // Default to current date if no transactions exist
+        let activeYear = new Date().getFullYear();
+        let activeMonth = new Date().getMonth(); // 0-indexed
+
+        if (txs.length > 0) {
+          const latestTxDate = new Date(txs[0].date);
+          activeYear = latestTxDate.getFullYear();
+          activeMonth = latestTxDate.getMonth();
+        }
+
+        const monthLabel = new Date(activeYear, activeMonth, 1).toLocaleString('en-US', { month: 'short' });
+        const monthName = new Date(activeYear, activeMonth, 1).toLocaleString('en-US', { month: 'long' });
+        const lastDay = new Date(activeYear, activeMonth + 1, 0).getDate();
+
+        setActivePeriodText(`${monthLabel} ${activeYear} Active`);
+        setActiveMonthYearLabel(`${monthLabel} ${activeYear}`);
+        setActiveMonthEndLabel(`${monthName.slice(0, 3)} ${lastDay}`);
+
+        // 2. Query active month P&L and Balance Sheet
+        const startDateStr = new Date(Date.UTC(activeYear, activeMonth, 1)).toISOString();
+        const endDateStr = new Date(Date.UTC(activeYear, activeMonth + 1, 0, 23, 59, 59, 999)).toISOString();
+        const asOfDateStr = new Date(Date.UTC(activeYear, activeMonth + 1, 0, 23, 59, 59, 999)).toISOString();
+
+        const pl = await api.get<any>(`/v1/reports/profit-loss?startDate=${startDateStr}&endDate=${endDateStr}`);
+        const bs = await api.get<any>(`/v1/reports/balance-sheet?asOfDate=${asOfDateStr}`);
 
         setMetrics({
           revenue: Number(pl.income?.totalIncome || 0),
@@ -46,7 +74,36 @@ export default function DashboardPage() {
           cashOnHand: Number(bs.assets?.cashAndBank?.total || 0),
         });
 
-        setTransactions(journals.data || []);
+        // 3. Fetch last 6 months P&L for charts
+        const monthsToFetch = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(activeYear, activeMonth - i, 1);
+          monthsToFetch.push({
+            year: d.getFullYear(),
+            month: d.getMonth(),
+            label: d.toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+          });
+        }
+
+        const monthlyReports = await Promise.all(
+          monthsToFetch.map(async (m) => {
+            const mStart = new Date(Date.UTC(m.year, m.month, 1)).toISOString();
+            const mEnd = new Date(Date.UTC(m.year, m.month + 1, 0, 23, 59, 59, 999)).toISOString();
+            try {
+              const r = await api.get<any>(`/v1/reports/profit-loss?startDate=${mStart}&endDate=${mEnd}`);
+              return {
+                month: m.label,
+                revenue: Number(r.income?.totalIncome || 0),
+                expenses: Number(r.operatingExpenses?.totalOperatingExpenses || 0),
+              };
+            } catch (err) {
+              console.error(`Failed to fetch P&L for ${m.label}:`, err);
+              return { month: m.label, revenue: 0, expenses: 0 };
+            }
+          })
+        );
+        setChartDataState(monthlyReports);
+
       } catch (err) {
         console.error('Failed to load dashboard data:', err);
       } finally {
@@ -64,10 +121,7 @@ export default function DashboardPage() {
     });
   };
 
-  // Build chart data from the metrics or fallback
-  const chartData = [
-    { month: 'Jan 2025', revenue: metrics?.revenue || 1000.0, expenses: metrics?.expenses || 2650.0 },
-  ];
+  const chartData = chartDataState;
 
   return (
     <div className="space-y-6">
@@ -78,7 +132,7 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500 mt-0.5">Real-time overview of your company financial health.</p>
         </div>
         <div className="text-xs bg-indigo-50 border border-indigo-200/50 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold font-mono">
-          Fiscal Period: 2025 Active
+          Fiscal Period: {activePeriodText}
         </div>
       </div>
 
@@ -91,7 +145,7 @@ export default function DashboardPage() {
             {/* Revenue */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft hover:shadow-card-hover transition-all">
               <div className="flex justify-between items-start">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Revenue (Jan 2025)</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Revenue ({activeMonthYearLabel})</span>
                 <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
                   <BanknotesIcon className="w-5 h-5" />
                 </div>
@@ -108,7 +162,7 @@ export default function DashboardPage() {
             {/* Expenses */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft hover:shadow-card-hover transition-all">
               <div className="flex justify-between items-start">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expenses (Jan 2025)</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expenses ({activeMonthYearLabel})</span>
                 <div className="p-2 bg-rose-50 rounded-lg text-rose-600">
                   <CreditCardIcon className="w-5 h-5" />
                 </div>
@@ -135,7 +189,7 @@ export default function DashboardPage() {
                   {formatCurrency(metrics?.netProfit || 0)}
                 </h3>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 mt-2 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200/50">
-                  Period ending Jan 31
+                  Period ending {activeMonthEndLabel}
                 </span>
               </div>
             </div>
@@ -160,7 +214,7 @@ export default function DashboardPage() {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft lg:col-span-2">
-              <h3 className="text-sm font-bold text-slate-800 mb-4">Revenue vs Expenses (Jan 2025)</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-4">Revenue vs Expenses ({activeMonthYearLabel})</h3>
               <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

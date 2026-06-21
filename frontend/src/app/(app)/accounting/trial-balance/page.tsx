@@ -16,7 +16,7 @@ interface TrialBalanceRow {
 export default function TrialBalancePage() {
   const [data, setData] = useState<TrialBalanceRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [asOfDate, setAsOfDate] = useState('2025-01-31');
+  const [asOfDate, setAsOfDate] = useState('2026-06-21');
 
   useEffect(() => {
     const fetchTrialBalance = async () => {

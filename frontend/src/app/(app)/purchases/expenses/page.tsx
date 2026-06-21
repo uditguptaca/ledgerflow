@@ -33,6 +33,7 @@ export default function ExpensesPage() {
   const [notes, setNotes] = useState('');
   const [reference, setReference] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [voidTargetId, setVoidTargetId] = useState<string | null>(null);
 
   const fetchExpenses = async () => {
     try {
@@ -107,10 +108,7 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleVoid = async (id: string) => {
-    if (!confirm('Are you sure you want to void this expense? This will reverse the journal entries.')) {
-      return;
-    }
+  const executeVoid = async (id: string) => {
     try {
       await api.post(`/v1/expenses/${id}/void`);
       toast.success('Expense voided successfully!');
@@ -202,7 +200,8 @@ export default function ExpensesPage() {
                     <td className="table-cell text-center">
                       {exp.status !== 'voided' && (
                         <button
-                          onClick={() => handleVoid(exp.id)}
+                          type="button"
+                          onClick={() => setVoidTargetId(exp.id)}
                           className="text-slate-400 hover:text-rose-600 p-1 hover:bg-rose-50 rounded"
                           title="Void Expense"
                         >
@@ -339,6 +338,38 @@ export default function ExpensesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {voidTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-6 animate-scale-in">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Void Expense</h3>
+              <p className="text-sm text-slate-500 mt-2">
+                Are you sure you want to void this expense? This will reverse the journal entries and cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setVoidTargetId(null)}
+                className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  executeVoid(voidTargetId);
+                  setVoidTargetId(null);
+                }}
+                className="btn-base bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 text-sm font-semibold shadow-soft"
+              >
+                Void Expense
+              </button>
+            </div>
           </div>
         </div>
       )}

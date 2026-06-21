@@ -279,4 +279,17 @@ export class PermissionGuard implements CanActivate {
   }
 }
 
+@Injectable()
+export class SuperAdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    if (!user || user.email !== 'admin@ledgerflow.dev') {
+      throw new ForbiddenException('Access denied: Platform Super Admin only');
+    }
+    return true;
+  }
+}
+
 export { ROLE_PERMISSIONS };
+

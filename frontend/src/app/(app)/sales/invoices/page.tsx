@@ -2,15 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import api from '@/lib/api';
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    // Prefetch new invoice page for instant click response
+    router.prefetch('/sales/invoices/new');
+
     api.get<{ data: any[] }>('/v1/invoices')
       .then((res) => {
         setInvoices(res.data || []);
@@ -21,7 +26,7 @@ export default function InvoicesPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [router]);
 
   const filteredInvoices = invoices.filter((i) => {
     return (
@@ -40,6 +45,7 @@ export default function InvoicesPage() {
         </div>
         <Link
           href="/sales/invoices/new"
+          prefetch={true}
           className="btn-base bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-sm font-semibold shadow-soft"
         >
           <PlusIcon className="w-4 h-4" />

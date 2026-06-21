@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
 
 interface Vendor {
   id: string;
@@ -14,15 +15,10 @@ interface Vendor {
   balance: number;
 }
 
-const INITIAL_VENDORS: Vendor[] = [
-  { id: 'VEND-001', name: 'Amazon Web Services', email: 'billing@aws.amazon.com', company: 'Amazon Web Services LLC', phone: '+1 (800) 280-4800', balance: 1280.5 },
-  { id: 'VEND-002', name: 'WeWork Office Space', email: 'tenants@wework.com', company: 'WeWork Inc', phone: '+1 (555) 012-7766', balance: 2400.0 },
-  { id: 'VEND-003', name: 'Google Cloud Platform', email: 'payments@google.com', company: 'Google LLC', phone: '+1 (800) 419-0120', balance: 0.0 },
-];
-
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<Vendor[]>(INITIAL_VENDORS);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form state
@@ -31,38 +27,77 @@ export default function VendorsPage() {
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
 
-  const handleAddVendor = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadVendors();
+  }, []);
+
+  const loadVendors = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get<any>('/v1/vendors');
+      const data = Array.isArray(res) ? res : res.data || [];
+      
+      const mapped = await Promise.all(
+        data.map(async (v: any) => {
+          let balance = 0;
+          try {
+            const balRes = await api.get<{ balance: string }>(`/v1/vendors/${v.id}/balance`);
+            balance = Number(balRes.balance || 0);
+          } catch (e) {
+            console.warn(`Failed to fetch balance for vendor ${v.id}:`, e);
+          }
+          return {
+            id: v.id,
+            name: v.name || '',
+            email: v.email || '',
+            company: v.notes || v.companyName || '',
+            phone: v.phone || '',
+            balance,
+          };
+        })
+      );
+
+      setVendors(mapped);
+    } catch (err) {
+      console.error('Failed to load vendors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) {
       toast.error('Vendor Name and Email are required.');
       return;
     }
 
-    const newVendor: Vendor = {
-      id: `VEND-00${vendors.length + 1}`,
-      name,
-      email,
-      company: company || name,
-      phone,
-      balance: 0.0,
-    };
-
-    setVendors([newVendor, ...vendors]);
-    toast.success(`Vendor ${name} added.`);
-    
-    // Reset Form
-    setName('');
-    setEmail('');
-    setCompany('');
-    setPhone('');
-    setIsModalOpen(false);
+    try {
+      await api.post('/v1/vendors', {
+        name,
+        email,
+        phone,
+        notes: company, // Store company description in notes since DB model doesn't have companyName
+      });
+      toast.success(`Vendor ${name} added.`);
+      
+      // Reset Form
+      setName('');
+      setEmail('');
+      setCompany('');
+      setPhone('');
+      setIsModalOpen(false);
+      loadVendors();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to add vendor.');
+    }
   };
 
   const filteredVendors = vendors.filter((v) => {
     return (
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.email.toLowerCase().includes(search.toLowerCase()) ||
-      v.company.toLowerCase().includes(search.toLowerCase())
+      (v.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (v.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (v.company || '').toLowerCase().includes(search.toLowerCase())
     );
   });
 
@@ -112,27 +147,44 @@ export default function VendorsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredVendors.map((v) => (
-                <tr key={v.id} className="hover:bg-slate-50/40 transition-colors">
-                  <td className="table-cell font-semibold text-slate-900">{v.name}</td>
-                  <td className="table-cell font-medium text-slate-505">{v.company}</td>
-                  <td className="table-cell text-slate-600">{v.email}</td>
-                  <td className="table-cell text-slate-500 font-mono text-xs">{v.phone || '-'}</td>
-                  <td className={`table-cell text-right font-mono font-semibold ${
-                    v.balance > 0 ? 'text-amber-600' : 'text-slate-500'
-                  }`}>
-                    ${v.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="table-cell text-center">
-                    <Link
-                      href={`/purchases/vendors/${v.id}`}
-                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-                    >
-                      Details
-                    </Link>
+              {loading && vendors.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-12 text-slate-400">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+                      Loading vendors...
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : filteredVendors.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-12 text-slate-400">
+                    No vendors found.
+                  </td>
+                </tr>
+              ) : (
+                filteredVendors.map((v) => (
+                  <tr key={v.id} className="hover:bg-slate-50/40 transition-colors">
+                    <td className="table-cell font-semibold text-slate-900">{v.name}</td>
+                    <td className="table-cell font-medium text-slate-505">{v.company}</td>
+                    <td className="table-cell text-slate-600">{v.email}</td>
+                    <td className="table-cell text-slate-500 font-mono text-xs">{v.phone || '-'}</td>
+                    <td className={`table-cell text-right font-mono font-semibold ${
+                      v.balance > 0 ? 'text-amber-600' : 'text-slate-500'
+                    }`}>
+                      ${v.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="table-cell text-center">
+                      <Link
+                        href={`/purchases/vendors/${v.id}`}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                      >
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

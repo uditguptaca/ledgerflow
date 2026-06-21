@@ -19,7 +19,7 @@ interface AgedPayablesRow {
 export default function AgedPayablesPage() {
   const [data, setData] = useState<AgedPayablesRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [asOfDate, setAsOfDate] = useState('2025-01-31');
+  const [asOfDate, setAsOfDate] = useState('2026-06-21');
 
   useEffect(() => {
     const fetchAgedPayables = async () => {

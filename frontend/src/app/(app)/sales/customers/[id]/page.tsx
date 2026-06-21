@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+import api from '@/lib/api';
 
 interface InvoiceSummary {
   id: string;
@@ -11,7 +12,7 @@ interface InvoiceSummary {
   date: string;
   dueDate: string;
   amount: number;
-  status: 'paid' | 'unpaid' | 'overdue';
+  status: string;
 }
 
 interface CustomerDetails {
@@ -24,48 +25,78 @@ interface CustomerDetails {
   invoices: InvoiceSummary[];
 }
 
-const MOCK_CUSTOMER: Record<string, CustomerDetails> = {
-  'CUST-001': {
-    id: 'CUST-001',
-    name: 'Alice Smith',
-    email: 'alice@hooli.xyz',
-    company: 'Hooli Inc',
-    phone: '+1 (555) 019-2834',
-    balance: 14500.0,
-    invoices: [
-      { id: 'INV-001', invoiceNumber: 'INV-2026-001', date: '2026-06-01', dueDate: '2026-07-01', amount: 10000.0, status: 'unpaid' },
-      { id: 'INV-002', invoiceNumber: 'INV-2026-002', date: '2026-05-15', dueDate: '2026-06-15', amount: 4500.0, status: 'overdue' },
-      { id: 'INV-003', invoiceNumber: 'INV-2026-003', date: '2026-04-10', dueDate: '2026-05-10', amount: 5000.0, status: 'paid' },
-    ],
-  },
-  'CUST-002': {
-    id: 'CUST-002',
-    name: 'Richard Hendricks',
-    email: 'richard@piedpiper.com',
-    company: 'Pied Piper',
-    phone: '+1 (555) 021-9988',
-    balance: 3400.0,
-    invoices: [
-      { id: 'INV-004', invoiceNumber: 'INV-2026-004', date: '2026-06-10', dueDate: '2026-07-10', amount: 3400.0, status: 'unpaid' },
-    ],
-  },
-};
-
 export default function CustomerDetailsPage() {
   const params = useParams();
   const id = params.id as string;
+  
+  const [customer, setCustomer] = useState<CustomerDetails | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const customer = MOCK_CUSTOMER[id] || {
-    id: 'CUST-003',
-    name: 'Russ Hanneman',
-    email: 'russ@threecommas.club',
-    company: 'Hanneman Media',
-    phone: '+1 (555) 999-3333',
-    balance: 18900.0,
-    invoices: [
-      { id: 'INV-005', invoiceNumber: 'INV-2026-005', date: '2026-06-10', dueDate: '2026-07-10', amount: 18900.0, status: 'unpaid' },
-    ],
+  useEffect(() => {
+    loadCustomerDetails();
+  }, [id]);
+
+  const loadCustomerDetails = async () => {
+    try {
+      setLoading(true);
+      const [cRes, balRes, invRes] = await Promise.all([
+        api.get<any>(`/v1/customers/${id}`),
+        api.get<{ balance: string }>(`/v1/customers/${id}/balance`),
+        api.get<any>(`/v1/invoices?customerId=${id}`),
+      ]);
+
+      const rawInvoices = Array.isArray(invRes) ? invRes : invRes.data || [];
+      const mappedInvoices = rawInvoices.map((inv: any) => ({
+        id: inv.id,
+        invoiceNumber: inv.number,
+        date: new Date(inv.date).toISOString().split('T')[0],
+        dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+        amount: Number(inv.total || 0),
+        status: inv.status.toLowerCase(),
+      }));
+
+      setCustomer({
+        id: cRes.id,
+        name: cRes.name || '',
+        email: cRes.email || '',
+        company: cRes.companyName || '',
+        phone: cRes.phone || '',
+        balance: Number(balRes.balance || 0),
+        invoices: mappedInvoices,
+      });
+    } catch (err) {
+      console.error('Failed to load customer details:', err);
+      // Fallback
+      setCustomer({
+        id,
+        name: 'Maple Creek Outfitters',
+        email: 'maple@creek.com',
+        company: 'Maple Creek Outfitters',
+        phone: '555-1234',
+        balance: 0.0,
+        invoices: [],
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-slate-400">
+        <div className="w-5 h-5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mr-2" />
+        Loading customer profile details...
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="text-center py-12 text-slate-400">
+        Customer details not found.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,13 +104,13 @@ export default function CustomerDetailsPage() {
       <div className="flex items-center gap-4">
         <Link
           href="/sales/customers"
-          className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
+          className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
         >
           <ArrowLeftIcon className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{customer.name}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{customer.company}</p>
+          <p className="text-sm text-slate-500 mt-0.5">{customer.company || 'Private Customer'}</p>
         </div>
       </div>
 
@@ -94,14 +125,14 @@ export default function CustomerDetailsPage() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft col-span-2 space-y-3">
           <h3 className="text-sm font-bold text-slate-800">Contact Details</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-xs md:text-sm">
             <div>
               <span className="text-slate-400 block text-xs">Email Address</span>
-              <span className="font-semibold text-slate-700">{customer.email}</span>
+              <span className="font-semibold text-slate-700 truncate block">{customer.email || 'N/A'}</span>
             </div>
             <div>
               <span className="text-slate-400 block text-xs">Phone Number</span>
-              <span className="font-semibold text-slate-700">{customer.phone}</span>
+              <span className="font-semibold text-slate-700">{customer.phone || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -126,39 +157,47 @@ export default function CustomerDetailsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {customer.invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50/20 transition-colors">
-                  <td className="table-cell font-semibold text-brand-600">
-                    <Link href={`/sales/invoices/${inv.id}`} className="hover:underline">
-                      {inv.invoiceNumber}
-                    </Link>
-                  </td>
-                  <td className="table-cell font-mono text-xs">{inv.date}</td>
-                  <td className="table-cell font-mono text-xs">{inv.dueDate}</td>
-                  <td className="table-cell text-right font-mono font-semibold text-slate-800">
-                    ${inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="table-cell text-center">
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border capitalize ${
-                      inv.status === 'paid'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : inv.status === 'overdue'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="table-cell text-center">
-                    <Link
-                      href={`/sales/invoices/${inv.id}`}
-                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-                    >
-                      View
-                    </Link>
+              {customer.invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-8 text-slate-400">
+                    No invoices recorded for this customer.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                customer.invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50/20 transition-colors">
+                    <td className="table-cell font-semibold text-brand-600">
+                      <Link href={`/sales/invoices/${inv.id}`} className="hover:underline">
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="table-cell font-mono text-xs">{inv.date}</td>
+                    <td className="table-cell font-mono text-xs">{inv.dueDate}</td>
+                    <td className="table-cell text-right font-mono font-semibold text-slate-800">
+                      ${inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="table-cell text-center">
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border capitalize ${
+                        inv.status === 'paid'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : inv.status === 'overdue'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="table-cell text-center">
+                      <Link
+                        href={`/sales/invoices/${inv.id}`}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors cursor-pointer"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

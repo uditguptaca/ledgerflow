@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard, CompanyGuard, PermissionGuard } from '../common/guards';
 import { RequirePermissions, CurrentCompany } from '../common/decorators';
@@ -69,4 +69,16 @@ export class CustomerController {
   ) {
     return this.customerService.updateCustomer(companyId, id, dto);
   }
+
+  @ApiOperation({ summary: 'Delete a customer' })
+  @ApiResponse({ status: 200, description: 'Customer successfully deleted' })
+  @RequirePermissions('customers.delete')
+  @Delete(':id')
+  async deleteCustomer(
+    @CurrentCompany('id') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.customerService.deleteCustomer(companyId, id);
+  }
 }
+

@@ -9,6 +9,7 @@ import { AccountService } from '../accounting/account.service';
 import { AuditService } from '../audit/audit.service';
 import { CreatePaymentDto, PaymentFilterDto } from './payment.dto';
 import Decimal from 'decimal.js';
+import { generateUniqueNumber } from '../common/number-generator';
 
 @Injectable()
 export class PaymentService {
@@ -58,13 +59,7 @@ export class PaymentService {
       }
 
       // Generate sequential number
-      const company = await tx.company.findUniqueOrThrow({ where: { id: companyId } });
-      const paymentNumber = `${company.paymentPrefix}-${String(company.nextPaymentNum).padStart(4, '0')}`;
-
-      await tx.company.update({
-        where: { id: companyId },
-        data: { nextPaymentNum: { increment: 1 } },
-      });
+      const paymentNumber = await generateUniqueNumber(tx, companyId, 'PAYMENT');
 
       // Create payment record
       const payment = await tx.payment.create({

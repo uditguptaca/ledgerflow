@@ -214,6 +214,7 @@ async function main() {
   // ── Users ──────────────────────────────────────────────
 
   const password = await argon2.hash('Demo2024!');
+  const superAdminPassword = await argon2.hash('SuperAdmin2024!');
 
   const sarah = await prisma.user.create({
     data: { email: 'sarah@northstar.demo', passwordHash: password, firstName: 'Sarah', lastName: 'Chen', emailVerified: true },
@@ -226,6 +227,9 @@ async function main() {
   });
   const james = await prisma.user.create({
     data: { email: 'james@northstar.demo', passwordHash: password, firstName: 'James', lastName: 'Wong', emailVerified: true },
+  });
+  const superAdmin = await prisma.user.create({
+    data: { email: 'admin@ledgerflow.dev', passwordHash: superAdminPassword, firstName: 'Platform', lastName: 'SuperAdmin', emailVerified: true },
   });
 
   // ── Workspace ──────────────────────────────────────────
@@ -248,6 +252,7 @@ async function main() {
   await prisma.workspaceMember.create({ data: { userId: marcus.id, workspaceId: workspace.id, role: 'MEMBER' } });
   await prisma.workspaceMember.create({ data: { userId: lisa.id, workspaceId: workspace.id, role: 'MEMBER' } });
   await prisma.workspaceMember.create({ data: { userId: james.id, workspaceId: workspace.id, role: 'MEMBER' } });
+  await prisma.workspaceMember.create({ data: { userId: superAdmin.id, workspaceId: workspace.id, role: 'ADMIN' } });
 
   // ── Companies ──────────────────────────────────────────
 

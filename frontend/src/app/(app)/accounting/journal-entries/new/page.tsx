@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import LineItemEditor, { LineItem } from '@/components/forms/LineItemEditor';
 import BalanceCheck from '@/components/reports/BalanceCheck';
+import api from '@/lib/api';
 
 export default function NewJournalEntryPage() {
   const router = useRouter();
@@ -46,13 +47,23 @@ export default function NewJournalEntryPage() {
 
     try {
       setLoading(true);
-      // Mock submit delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const lines = items.map((item) => ({
+        accountId: item.accountId,
+        debit: Number(item.debit) > 0 ? Number(item.debit).toFixed(4) : undefined,
+        credit: Number(item.credit) > 0 ? Number(item.credit).toFixed(4) : undefined,
+        description: item.description || undefined,
+      }));
+
+      await api.post('/v1/accounting/journals', {
+        date: `${date}T12:00:00.000Z`,
+        memo: memo || undefined,
+        lines,
+      });
 
       toast.success(`Journal entry successfully ${status === 'posted' ? 'posted' : 'saved as draft'}.`);
       router.push('/accounting/journal-entries');
-    } catch (err) {
-      toast.error('Failed to create journal entry.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create journal entry.');
     } finally {
       setLoading(false);
     }

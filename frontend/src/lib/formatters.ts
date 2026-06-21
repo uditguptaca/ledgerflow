@@ -1,5 +1,3 @@
-import { format as fnsFormat, parseISO, isValid } from 'date-fns';
-
 /**
  * Formats a numeric amount as currency.
  * @param amount - The numeric amount to format.
@@ -30,9 +28,35 @@ export function formatDate(
 ): string {
   if (!date) return '-';
   try {
-    const parsedDate = typeof date === 'string' ? parseISO(date) : date;
-    if (!isValid(parsedDate)) return '-';
-    return fnsFormat(parsedDate, formatStr);
+    let d: Date;
+    if (typeof date === 'string') {
+      if (date.includes('T')) {
+        d = new Date(date);
+      } else {
+        d = new Date(`${date}T00:00:00.000Z`);
+      }
+    } else {
+      d = date;
+    }
+
+    if (isNaN(d.getTime())) return '-';
+
+    if (formatStr === 'MMM dd, yyyy') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const month = months[d.getUTCMonth()];
+      const year = d.getUTCFullYear();
+      return `${month} ${day}, ${year}`;
+    }
+
+    if (formatStr === 'yyyy-MM-dd') {
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return d.toLocaleDateString('en-US');
   } catch (error) {
     console.error('Error formatting date:', error);
     return '-';

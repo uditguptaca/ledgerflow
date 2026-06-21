@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import AccountPicker from '@/components/forms/AccountPicker';
 
 interface StatementFeed {
   id: string;
@@ -88,17 +89,11 @@ export default function BankInboxPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <select 
-                    onChange={(e) => handleCategorize(item.id, e.target.value)}
-                    className="input-base text-xs py-1.5 appearance-none bg-slate-50 font-semibold text-slate-700 w-44"
-                    defaultValue=""
-                  >
-                    <option value="" disabled>Select Expense Account...</option>
-                    <option value="Travel Expense">Travel & Transportation</option>
-                    <option value="Office Expense">Office Supplies</option>
-                    <option value="Entertainment">Meals & Entertainment</option>
-                    <option value="Software">Hosting & Software</option>
-                  </select>
+                  <div className="w-56">
+                    <AccountPicker
+                      onChange={(account) => handleCategorize(item.id, account.name)}
+                    />
+                  </div>
                   <button
                     onClick={() => handleCategorize(item.id, 'Uncategorized')}
                     className="btn-base bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs px-3 py-1.5 font-semibold"

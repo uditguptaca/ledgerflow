@@ -131,7 +131,7 @@ export default function PaymentsPage() {
                             className="text-slate-400 hover:text-rose-600 p-1 hover:bg-rose-50 rounded"
                             title="Void Payment"
                           >
-                            <TrashIcon className="w-4.5 h-4.5" />
+                            <TrashIcon className="w-5 h-5" />
                           </button>
                         )}
                       </td>

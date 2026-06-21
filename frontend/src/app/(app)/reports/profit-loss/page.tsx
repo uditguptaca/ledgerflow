@@ -8,8 +8,8 @@ import api from '@/lib/api';
 export default function ProfitLossPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('2025-01-01');
-  const [endDate, setEndDate] = useState('2025-01-31');
+  const [startDate, setStartDate] = useState('2026-01-01');
+  const [endDate, setEndDate] = useState('2026-06-21');
 
   const fetchReport = () => {
     setLoading(true);
@@ -56,7 +56,8 @@ export default function ProfitLossPage() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => window.print()}
+            type="button"
+            onClick={(e) => { e.preventDefault(); window.print(); }}
             className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
           >
             Print Report

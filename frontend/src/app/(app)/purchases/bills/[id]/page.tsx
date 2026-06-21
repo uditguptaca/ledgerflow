@@ -17,6 +17,17 @@ export default function BillDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [bankAccountId, setBankAccountId] = useState('');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+
+  // Void confirmation state
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
+
   const fetchBill = () => {
     setLoading(true);
     api.get<any>(`/v1/bills/${id}`)
@@ -38,6 +49,25 @@ export default function BillDetailsPage() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (showPaymentModal && bill) {
+      api.get<any[]>('/v1/banking/accounts')
+        .then((res) => {
+          if (res && Array.isArray(res)) {
+            setBankAccounts(res);
+            if (res.length > 0) {
+              setBankAccountId(res[0].id);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load bank accounts:', err);
+          toast.error('Failed to load bank accounts.');
+        });
+      setPaymentAmount(Number(bill.amountDue));
+    }
+  }, [showPaymentModal, bill]);
+
   const handlePost = async () => {
     try {
       setActionLoading(true);
@@ -51,10 +81,7 @@ export default function BillDetailsPage() {
     }
   };
 
-  const handleVoid = async () => {
-    if (!confirm('Are you sure you want to void this bill? This will reverse all ledger entries.')) {
-      return;
-    }
+  const executeVoid = async () => {
     try {
       setActionLoading(true);
       await api.post(`/v1/bills/${id}/void`);
@@ -62,6 +89,43 @@ export default function BillDetailsPage() {
       fetchBill();
     } catch (err: any) {
       toast.error(err.message || 'Failed to void bill');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bankAccountId) {
+      toast.error('Please select a payment account.');
+      return;
+    }
+    if (Number(paymentAmount) <= 0) {
+      toast.error('Payment amount must be greater than zero.');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const payload = {
+        vendorId: bill.vendorId,
+        bankAccountId,
+        date: `${paymentDate}T00:00:00Z`,
+        amount: Number(paymentAmount),
+        reference: paymentRef || undefined,
+        allocations: [
+          {
+            billId: bill.id,
+            amount: Number(paymentAmount),
+          },
+        ],
+      };
+      await api.post('/v1/vendor-payments', payload);
+      toast.success('Payment recorded successfully!');
+      setShowPaymentModal(false);
+      fetchBill();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to record payment');
     } finally {
       setActionLoading(false);
     }
@@ -119,6 +183,7 @@ export default function BillDetailsPage() {
         <div className="flex gap-2">
           {status === 'draft' && (
             <button
+              type="button"
               onClick={handlePost}
               disabled={actionLoading}
               className="btn-base bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-sm font-semibold shadow-soft"
@@ -128,15 +193,27 @@ export default function BillDetailsPage() {
           )}
           {(status === 'pending' || status === 'overdue' || status === 'partially_paid') && (
             <button
-              onClick={handleVoid}
+              type="button"
+              onClick={() => setShowVoidConfirm(true)}
               disabled={actionLoading}
               className="btn-base bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 text-sm font-semibold"
             >
               Void Bill
             </button>
           )}
+          {(status === 'pending' || status === 'overdue' || status === 'partially_paid') && Number(bill.amountDue) > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowPaymentModal(true)}
+              disabled={actionLoading}
+              className="btn-base bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-soft"
+            >
+              Record Payment
+            </button>
+          )}
           <button
-            onClick={() => window.print()}
+            type="button"
+            onClick={(e) => { e.preventDefault(); window.print(); }}
             className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
           >
             Print Bill Details
@@ -224,6 +301,139 @@ export default function BillDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Record Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-6 animate-scale-in">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Record Payment</h3>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleRecordPayment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Payment Account
+                </label>
+                <select
+                  value={bankAccountId}
+                  onChange={(e) => setBankAccountId(e.target.value)}
+                  className="select-base"
+                  required
+                >
+                  <option value="" disabled>Select account...</option>
+                  {bankAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} (${Number(acc.currentBalance).toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="input-base font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Amount Paid
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={Number(bill.amountDue)}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                    className="input-base font-mono text-right"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Reference / Memo
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Check #502, Bank transfer"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  className="input-base"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="btn-base bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 text-sm font-semibold shadow-soft"
+                >
+                  {actionLoading ? 'Recording...' : 'Record Payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Void confirmation Modal */}
+      {showVoidConfirm && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-6 animate-scale-in">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Void Bill</h3>
+              <p className="text-sm text-slate-500 mt-2">
+                Are you sure you want to void this bill? This will reverse all ledger entries and cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowVoidConfirm(false)}
+                className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVoidConfirm(false);
+                  executeVoid();
+                }}
+                disabled={actionLoading}
+                className="btn-base bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 text-sm font-semibold shadow-soft"
+              >
+                {actionLoading ? 'Voiding...' : 'Void Bill'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import api from '@/lib/api';
 export default function BalanceSheetPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [asOfDate, setAsOfDate] = useState('2025-01-31');
+  const [asOfDate, setAsOfDate] = useState('2026-06-21');
 
   const fetchReport = () => {
     setLoading(true);

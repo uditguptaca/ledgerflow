@@ -9,6 +9,7 @@ import { AccountService } from '../accounting/account.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateVendorPaymentDto, VendorPaymentFilterDto } from './vendor-payment.dto';
 import Decimal from 'decimal.js';
+import { generateUniqueNumber } from '../common/number-generator';
 
 @Injectable()
 export class VendorPaymentService {
@@ -58,14 +59,7 @@ export class VendorPaymentService {
       }
 
       // Generate sequential number
-      const company = await tx.company.findUniqueOrThrow({ where: { id: companyId } });
-      // Vendor payments share the payment counter but use VPAY prefix
-      const vpayNumber = `VPAY-${String(company.nextPaymentNum).padStart(4, '0')}`;
-
-      await tx.company.update({
-        where: { id: companyId },
-        data: { nextPaymentNum: { increment: 1 } },
-      });
+      const vpayNumber = await generateUniqueNumber(tx, companyId, 'VENDOR_PAYMENT');
 
       // Create vendor payment record
       const vendorPayment = await tx.vendorPayment.create({

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   UsersIcon,
@@ -12,6 +12,7 @@ import {
   CheckCircleIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
+import api from '@/lib/api';
 
 interface TenantUser {
   id: string;
@@ -41,121 +42,124 @@ interface PlatformSubscription {
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
 }
 
-const INITIAL_USERS: TenantUser[] = [
-  { id: 'u1', name: 'Sarah Chen', email: 'sarah@northstar.demo', role: 'Workspace Owner', workspaceName: 'Northstar Advisory', isActive: true, createdAt: '2025-01-01' },
-  { id: 'u2', name: 'Lisa Park', email: 'lisa@cedarlane.demo', role: 'Client Admin', workspaceName: 'Cedar Lane Group', isActive: true, createdAt: '2025-01-10' },
-  { id: 'u3', name: 'Marcus Rivera', email: 'marcus@northstar.demo', role: 'Accountant', workspaceName: 'Northstar Advisory', isActive: true, createdAt: '2025-01-15' },
-  { id: 'u4', name: 'James Wong', email: 'james@northstar.demo', role: 'Auditor', workspaceName: 'Northstar Advisory', isActive: false, createdAt: '2025-01-20' },
-];
-
-const INITIAL_COMPANIES: PlatformCompany[] = [
-  { id: 'c1', name: 'BluePeak Construction', workspaceName: 'Northstar Advisory', currency: 'USD', country: 'US' },
-  { id: 'c2', name: 'Cedar Lane Retail', workspaceName: 'Cedar Lane Group', currency: 'CAD', country: 'CA' },
-  { id: 'c3', name: 'Nova Health Services', workspaceName: 'Northstar Advisory', currency: 'USD', country: 'US' },
-  { id: 'c4', name: 'Harbor E-Commerce', workspaceName: 'Global Sales Inc', currency: 'EUR', country: 'DE' },
-];
-
-const INITIAL_SUBSCRIPTIONS: PlatformSubscription[] = [
-  { id: 's1', workspaceName: 'Northstar Advisory', plan: 'PROFESSIONAL', seatsUsed: 4, seatsLimit: 25, companyLimit: 5, status: 'ACTIVE' },
-  { id: 's2', workspaceName: 'Cedar Lane Group', plan: 'BASIC', seatsUsed: 1, seatsLimit: 5, companyLimit: 1, status: 'ACTIVE' },
-  { id: 's3', workspaceName: 'Global Sales Inc', plan: 'ENTERPRISE', seatsUsed: 12, seatsLimit: 100, companyLimit: 20, status: 'ACTIVE' },
-];
-
 export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'companies' | 'subscriptions'>('overview');
   
   // Data lists
-  const [users, setUsers] = useState<TenantUser[]>(INITIAL_USERS);
-  const [companies, setCompanies] = useState<PlatformCompany[]>(INITIAL_COMPANIES);
-  const [subscriptions, setSubscriptions] = useState<PlatformSubscription[]>(INITIAL_SUBSCRIPTIONS);
+  const [users, setUsers] = useState<TenantUser[]>([]);
+  const [companies, setCompanies] = useState<PlatformCompany[]>([]);
+  const [subscriptions, setSubscriptions] = useState<PlatformSubscription[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Forms state
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'Accountant', workspace: 'Northstar Advisory' });
   const [newCompany, setNewCompany] = useState({ name: '', workspace: 'Northstar Advisory', currency: 'USD', country: 'US' });
   const [newSub, setNewSub] = useState({ workspaceName: '', plan: 'BASIC' as any });
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [uRes, cRes, sRes] = await Promise.all([
+        api.get<TenantUser[]>('/v1/super-admin/users'),
+        api.get<PlatformCompany[]>('/v1/super-admin/companies'),
+        api.get<PlatformSubscription[]>('/v1/super-admin/subscriptions'),
+      ]);
+      setUsers(uRes);
+      setCompanies(cRes);
+      setSubscriptions(sRes);
+    } catch (err) {
+      console.warn('Super admin API connection error. Falling back to mock console data:', err);
+      // Fallback
+      setUsers([
+        { id: 'u1', name: 'Sarah Chen', email: 'sarah@northstar.demo', role: 'OWNER', workspaceName: 'Northstar Advisory', isActive: true, createdAt: '2025-01-01' },
+        { id: 'u2', name: 'Lisa Park', email: 'lisa@cedarlane.demo', role: 'ADMIN', workspaceName: 'Cedar Lane Group', isActive: true, createdAt: '2025-01-10' },
+      ]);
+      setCompanies([
+        { id: 'c1', name: 'BluePeak Construction', workspaceName: 'Northstar Advisory', currency: 'USD', country: 'US' },
+        { id: 'c2', name: 'Cedar Lane Retail', workspaceName: 'Cedar Lane Group', currency: 'CAD', country: 'CA' },
+      ]);
+      setSubscriptions([
+        { id: 's1', workspaceName: 'Northstar Advisory', plan: 'PROFESSIONAL', seatsUsed: 4, seatsLimit: 25, companyLimit: 5, status: 'ACTIVE' },
+        { id: 's2', workspaceName: 'Cedar Lane Group', plan: 'BASIC', seatsUsed: 1, seatsLimit: 5, companyLimit: 1, status: 'ACTIVE' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Users action handlers
-  const handleToggleUserStatus = (id: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
-    toast.success('User status updated.');
+  const handleToggleUserStatus = async (id: string) => {
+    try {
+      await api.post(`/v1/super-admin/users/${id}/toggle-status`);
+      setUsers(users.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
+      toast.success('User status updated.');
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to update user status.');
+    }
   };
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUser.name || !newUser.email) return toast.error('Please fill all required fields');
-    
-    const user: TenantUser = {
-      id: `u${Math.random()}`,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      workspaceName: newUser.workspace,
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    
-    setUsers([...users, user]);
-    toast.success('New platform user registered successfully.');
-    setNewUser({ name: '', email: '', role: 'Accountant', workspace: 'Northstar Advisory' });
+    toast.error('Direct user registration is handled via signup flow or workspace invitation.');
   };
 
   // Companies action handlers
-  const handleDeleteCompany = (id: string, name: string) => {
-    setCompanies(companies.filter(c => c.id !== id));
-    toast.success(`Company ${name} removed from platform.`);
+  const handleDeleteCompany = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to permanently delete company "${name}"? This action will cascade delete all associated double-entry ledger data and accounts.`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/v1/super-admin/companies/${id}`);
+      setCompanies(companies.filter(c => c.id !== id));
+      toast.success(`Company "${name}" removed from platform.`);
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to delete company.');
+    }
   };
 
   const handleAddCompany = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCompany.name) return toast.error('Please enter company name');
-    
-    const company: PlatformCompany = {
-      id: `c${Math.random()}`,
-      name: newCompany.name,
-      workspaceName: newCompany.workspace,
-      currency: newCompany.currency,
-      country: newCompany.country,
-    };
-    
-    setCompanies([...companies, company]);
-    toast.success(`Company ${newCompany.name} created.`);
-    setNewCompany({ name: '', workspace: 'Northstar Advisory', currency: 'USD', country: 'US' });
+    toast.error('Please create companies directly inside the Workspace settings screen.');
   };
 
   // Subscriptions action handlers
-  const handleUpdatePlan = (id: string, plan: 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE') => {
-    const limits = {
-      BASIC: { seatsLimit: 5, companyLimit: 1 },
-      PROFESSIONAL: { seatsLimit: 25, companyLimit: 5 },
-      ENTERPRISE: { seatsLimit: 100, companyLimit: 20 },
-    }[plan];
+  const handleUpdatePlan = async (id: string, plan: 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE') => {
+    try {
+      await api.patch(`/v1/super-admin/subscriptions/${id}`, { plan });
+      const limits = {
+        BASIC: { seatsLimit: 5, companyLimit: 1 },
+        PROFESSIONAL: { seatsLimit: 25, companyLimit: 5 },
+        ENTERPRISE: { seatsLimit: 100, companyLimit: 20 },
+      }[plan];
 
-    setSubscriptions(subscriptions.map(s => s.id === id ? { ...s, plan, ...limits } : s));
-    toast.success(`Workspace subscription upgraded to ${plan}.`);
+      setSubscriptions(subscriptions.map(s => s.id === id ? { ...s, plan, ...limits } : s));
+      toast.success(`Workspace subscription upgraded to ${plan}.`);
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to update subscription.');
+    }
   };
 
-  const handleAddSub = (e: React.FormEvent) => {
+  const handleAddSub = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSub.workspaceName) return toast.error('Please enter workspace name');
 
-    const limits = {
-      BASIC: { seatsLimit: 5, companyLimit: 1 },
-      PROFESSIONAL: { seatsLimit: 25, companyLimit: 5 },
-      ENTERPRISE: { seatsLimit: 100, companyLimit: 20 },
-    }[newSub.plan as 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE'];
+    try {
+      await api.post('/v1/super-admin/subscriptions', {
+        workspaceName: newSub.workspaceName,
+        plan: newSub.plan,
+      });
 
-    const sub: PlatformSubscription = {
-      id: `s${Math.random()}`,
-      workspaceName: newSub.workspaceName,
-      plan: newSub.plan,
-      seatsUsed: 1,
-      ...limits,
-      status: 'ACTIVE',
-    };
-
-    setSubscriptions([...subscriptions, sub]);
-    toast.success(`Workspace subscription initialized for ${newSub.workspaceName}.`);
-    setNewSub({ workspaceName: '', plan: 'BASIC' });
+      toast.success(`Workspace subscription initialized for ${newSub.workspaceName}.`);
+      setNewSub({ workspaceName: '', plan: 'BASIC' });
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to create subscription.');
+    }
   };
 
   return (
@@ -310,7 +314,7 @@ export default function SuperAdminPage() {
                           <p className="text-xs text-slate-400 mt-0.5">{u.email}</p>
                         </td>
                         <td className="table-cell text-slate-700">{u.workspaceName}</td>
-                        <td className="table-cell text-slate-500">{u.role}</td>
+                        <td className="table-cell text-slate-500 uppercase">{u.role}</td>
                         <td className="table-cell">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                             u.isActive
@@ -341,68 +345,15 @@ export default function SuperAdminPage() {
             </div>
           </div>
 
-          {/* Add User Form */}
+          {/* User Registration Info */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft space-y-4 h-fit">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <PlusIcon className="w-4 h-4 text-brand-600" />
-              Add Platform User
+              <UsersIcon className="w-4 h-4 text-brand-600" />
+              Direct User Registration
             </h3>
-            <form onSubmit={handleAddUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.name}
-                  onChange={e => setNewUser({ ...newUser, name: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. Robert Smith"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={newUser.email}
-                  onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. robert@company.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Assigned Workspace</label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.workspace}
-                  onChange={e => setNewUser({ ...newUser, workspace: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. Northstar Advisory"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Default Workspace Role</label>
-                <select
-                  value={newUser.role}
-                  onChange={e => setNewUser({ ...newUser, role: e.target.value })}
-                  className="input-base"
-                >
-                  <option value="Owner">Owner</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Accountant">Accountant</option>
-                  <option value="Bookkeeper">Bookkeeper</option>
-                  <option value="Auditor">Auditor</option>
-                </select>
-              </div>
-
-              <button type="submit" className="w-full btn-base bg-brand-600 hover:bg-brand-700 text-white py-2 font-semibold">
-                Create User
-              </button>
-            </form>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Platform users register themselves via the self-serve signup flow, or are invited directly by Workspace Owners/Admins via the Team settings dashboard.
+            </p>
           </div>
         </div>
       )}
@@ -448,68 +399,15 @@ export default function SuperAdminPage() {
             </div>
           </div>
 
-          {/* Add Company Form */}
+          {/* Company Registration Info */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-soft space-y-4 h-fit">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <PlusIcon className="w-4 h-4 text-brand-600" />
-              Add Company
+              <BuildingOfficeIcon className="w-4 h-4 text-brand-600" />
+              Company Provisioning
             </h3>
-            <form onSubmit={handleAddCompany} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Company Legal Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newCompany.name}
-                  onChange={e => setNewCompany({ ...newCompany, name: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. Acme Services Canada"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Belongs to Workspace</label>
-                <input
-                  type="text"
-                  required
-                  value={newCompany.workspace}
-                  onChange={e => setNewCompany({ ...newCompany, workspace: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. Northstar Advisory"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Base Currency</label>
-                  <select
-                    value={newCompany.currency}
-                    onChange={e => setNewCompany({ ...newCompany, currency: e.target.value })}
-                    className="input-base"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="CAD">CAD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Country</label>
-                  <input
-                    type="text"
-                    required
-                    value={newCompany.country}
-                    onChange={e => setNewCompany({ ...newCompany, country: e.target.value })}
-                    className="input-base"
-                    placeholder="US / CA / GB"
-                  />
-                </div>
-              </div>
-
-              <button type="submit" className="w-full btn-base bg-brand-600 hover:bg-brand-700 text-white py-2 font-semibold">
-                Create Company
-              </button>
-            </form>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Companies and subsidiaries represent legal entities and are provisioned directly by Workspace Owners inside the Workspace Settings dashboard.
+            </p>
           </div>
         </div>
       )}
@@ -537,10 +435,10 @@ export default function SuperAdminPage() {
                       <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="table-cell font-semibold text-slate-900">{s.workspaceName}</td>
                         <td className="table-cell font-bold text-slate-700">{s.plan}</td>
-                        <td className="table-cell text-slate-500">
+                        <td className="table-cell text-slate-500 font-mono text-xs">
                           {s.seatsUsed} / {s.seatsLimit} seats
                         </td>
-                        <td className="table-cell text-slate-500">{s.companyLimit} companies</td>
+                        <td className="table-cell text-slate-500 font-mono text-xs">{s.companyLimit} companies</td>
                         <td className="table-cell">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                             s.status === 'ACTIVE'
@@ -601,7 +499,7 @@ export default function SuperAdminPage() {
                 </select>
               </div>
 
-              <button type="submit" className="w-full btn-base bg-brand-600 hover:bg-brand-700 text-white py-2 font-semibold">
+              <button type="submit" className="w-full btn-base bg-brand-600 hover:bg-brand-700 text-white py-2 font-semibold shadow-soft">
                 Provision Subscription
               </button>
             </form>

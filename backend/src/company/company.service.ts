@@ -354,4 +354,29 @@ export class CompanyService {
 
     return { message: 'Default tax codes seeded successfully' };
   }
+
+  async deleteCompany(companyId: string, userId: string) {
+    const company = await this.getCompany(companyId);
+
+    // Verify workspace access and role (must be OWNER or ADMIN of the workspace)
+    const workspaceMember = await this.prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId: company.workspaceId,
+        },
+      },
+    });
+
+    if (!workspaceMember || !workspaceMember.isActive || !['OWNER', 'ADMIN'].includes(workspaceMember.role)) {
+      throw new ForbiddenException('Access denied: only workspace owners or admins can delete companies');
+    }
+
+    // Perform cascade delete (Cascade deletes are set up on database level in Prisma schema)
+    await this.prisma.company.delete({
+      where: { id: companyId },
+    });
+
+    return { success: true };
+  }
 }

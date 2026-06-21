@@ -10,6 +10,7 @@ import { TaxService } from '../tax/tax.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateExpenseDto, ExpenseFilterDto } from './expense.dto';
 import Decimal from 'decimal.js';
+import { generateUniqueNumber } from '../common/number-generator';
 
 @Injectable()
 export class ExpenseService {
@@ -62,13 +63,7 @@ export class ExpenseService {
       }
 
       // Generate sequential number
-      const company = await tx.company.findUniqueOrThrow({ where: { id: companyId } });
-      const expenseNumber = `EXP-${String(company.nextExpenseNum).padStart(4, '0')}`;
-
-      await tx.company.update({
-        where: { id: companyId },
-        data: { nextExpenseNum: { increment: 1 } },
-      });
+      const expenseNumber = await generateUniqueNumber(tx, companyId, 'EXPENSE');
 
       // Calculate tax
       const grossAmount = new Decimal(dto.amount);

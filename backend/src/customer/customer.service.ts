@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateCustomerDto, UpdateCustomerDto, GetCustomersFilterDto } from './customer.dto';
 import Decimal from 'decimal.js';
@@ -111,5 +111,31 @@ export class CustomerService {
 
     // Accounts Receivable is a debit-normal asset account
     return totalDebit.minus(totalCredit);
+  }
+
+  async deleteCustomer(companyId: string, id: string) {
+    const customer = await this.getCustomer(companyId, id);
+
+    // Check if the customer has any invoices
+    const invoiceCount = await this.prisma.invoice.count({
+      where: { customerId: id },
+    });
+    if (invoiceCount > 0) {
+      throw new BadRequestException('Cannot delete customer with existing invoices. Mark them inactive instead.');
+    }
+
+    // Check if the customer has any journal lines
+    const journalLineCount = await this.prisma.journalLine.count({
+      where: { customerId: id },
+    });
+    if (journalLineCount > 0) {
+      throw new BadRequestException('Cannot delete customer with existing transaction history. Mark them inactive instead.');
+    }
+
+    await this.prisma.customer.delete({
+      where: { id: customer.id },
+    });
+
+    return { success: true };
   }
 }

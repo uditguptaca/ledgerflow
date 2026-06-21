@@ -8,6 +8,7 @@ export interface Company {
   id: string;
   name: string;
   currency: string;
+  workspaceId?: string;
   role?: string;
   createdAt?: string;
 }

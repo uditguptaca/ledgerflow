@@ -11,6 +11,7 @@ import { TaxService } from '../tax/tax.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateInvoiceDto, UpdateInvoiceDto, InvoiceFilterDto } from './invoice.dto';
 import Decimal from 'decimal.js';
+import { generateUniqueNumber } from '../common/number-generator';
 
 @Injectable()
 export class InvoiceService {
@@ -38,13 +39,7 @@ export class InvoiceService {
       }
 
       // Generate sequential number
-      const company = await tx.company.findUniqueOrThrow({ where: { id: companyId } });
-      const invoiceNumber = `${company.invoicePrefix}-${String(company.nextInvoiceNum).padStart(4, '0')}`;
-
-      await tx.company.update({
-        where: { id: companyId },
-        data: { nextInvoiceNum: { increment: 1 } },
-      });
+      const invoiceNumber = await generateUniqueNumber(tx, companyId, 'INVOICE');
 
       // Calculate line totals and tax
       let subtotal = new Decimal(0);

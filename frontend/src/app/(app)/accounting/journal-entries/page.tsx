@@ -101,7 +101,9 @@ export default function JournalEntriesPage() {
                     <tr key={e.id} className="hover:bg-slate-50/40 transition-colors">
                       <td className="table-cell font-mono text-xs">{e.date ? new Date(e.date).toISOString().split('T')[0] : '-'}</td>
                       <td className="table-cell font-semibold text-brand-600">
-                        {e.number}
+                        <Link href={`/accounting/journal-entries/${e.id}`} className="hover:underline">
+                          {e.number}
+                        </Link>
                       </td>
                       <td className="table-cell font-mono text-xs capitalize">{e.sourceType?.toLowerCase()}</td>
                       <td className="table-cell text-slate-700 font-medium">{e.memo}</td>

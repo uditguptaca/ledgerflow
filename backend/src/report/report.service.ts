@@ -655,6 +655,7 @@ export class ReportService {
       where: {
         companyId,
         isVoided: false,
+        status: { not: 'DRAFT' },
         amountDue: { gt: 0 },
       },
       include: {
@@ -799,6 +800,7 @@ export class ReportService {
       where: {
         companyId,
         isVoided: false,
+        status: { not: 'DRAFT' },
         amountDue: { gt: 0 },
       },
       include: {

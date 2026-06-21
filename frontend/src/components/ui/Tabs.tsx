@@ -66,7 +66,7 @@ export const Tabs: React.FC<TabsProps> = ({
             onClick={() => onChange(tab.id)}
             className={itemVariants[variant](isActive)}
           >
-            {tab.icon && <span className="w-4.5 h-4.5 shrink-0 flex items-center justify-center">{tab.icon}</span>}
+            {tab.icon && <span className="w-5 h-5 shrink-0 flex items-center justify-center">{tab.icon}</span>}
             <span>{tab.label}</span>
           </button>
         );

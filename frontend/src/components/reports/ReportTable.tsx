@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { format } from 'date-fns';
 
 export interface ColumnConfig<T> {
   header: string;
@@ -42,7 +41,12 @@ export default function ReportTable<T extends Record<string, any>>({
     }
     if (type === 'date') {
       try {
-        return format(new Date(value), 'yyyy-MM-dd');
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return String(value);
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       } catch {
         return String(value);
       }
