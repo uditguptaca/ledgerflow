@@ -67,6 +67,7 @@ async function request<T>(
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: options?.signal,
+      cache: 'no-store',
     });
   } catch (fetchErr) {
     console.warn('[API Connection Error] Failed to reach backend, falling back to mock database:', fetchErr);

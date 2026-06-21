@@ -58,6 +58,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isChunkError = (str: string) => {
+      return (
+        str.includes('Loading chunk') ||
+        str.includes('ChunkLoadError') ||
+        str.includes('Cannot find module')
+      );
+    };
+
+    const handleChunkError = (error: ErrorEvent) => {
+      const errorMsg = error.message || '';
+      const errorStr = String(error.error || '');
+      if (isChunkError(errorMsg) || isChunkError(errorStr)) {
+        console.warn('Chunk load error event detected. Reloading page...', errorMsg || errorStr);
+        window.location.reload();
+      }
+    };
+
+    const handlePromiseRejection = (event: PromiseRejectionEvent) => {
+      const reasonStr = String(event.reason || '');
+      if (isChunkError(reasonStr)) {
+        console.warn('Unhandled chunk rejection detected. Reloading page...', reasonStr);
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('error', handleChunkError);
+    window.addEventListener('unhandledrejection', handlePromiseRejection);
+
+    return () => {
+      window.removeEventListener('error', handleChunkError);
+      window.removeEventListener('unhandledrejection', handlePromiseRejection);
+    };
+  }, []);
+
   const login = (token: string, userData: User) => {
     saveToken(token);
     const name = userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;

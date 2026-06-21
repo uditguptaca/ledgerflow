@@ -10,14 +10,16 @@ import { api } from '@/lib/api';
 
 export default function NewInvoicePage() {
   const router = useRouter();
-  const [formValues, setFormValues] = useState({
-    customerId: '',
-    date: new Date().toISOString().split('T')[0],
-    dueDate: new Date().toISOString().split('T')[0],
-    reference: '',
-  });
+  const [customerId, setCustomerId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reference, setReference] = useState('');
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+
+  const [items, setItems] = useState<LineItem[]>([
+    { id: '1', accountId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0, debit: 0, credit: 0 },
+  ]);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -33,15 +35,10 @@ export default function NewInvoicePage() {
     loadCustomers();
   }, []);
 
-  // Line items state (transaction mode requires quantity, unitPrice, taxRate)
-  const [items, setItems] = useState<LineItem[]>([
-    { id: '1', accountId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0, debit: 0, credit: 0 },
-  ]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formValues.customerId) {
+    if (!customerId) {
       toast.error('Please select a customer.');
       return;
     }
@@ -59,10 +56,10 @@ export default function NewInvoicePage() {
     try {
       setLoading(true);
       const payload = {
-        customerId: formValues.customerId,
-        date: `${formValues.date}T00:00:00Z`,
-        dueDate: formValues.dueDate ? `${formValues.dueDate}T00:00:00Z` : `${formValues.date}T00:00:00Z`,
-        notes: formValues.reference,
+        customerId,
+        date: `${date}T00:00:00Z`,
+        dueDate: dueDate ? `${dueDate}T00:00:00Z` : `${date}T00:00:00Z`,
+        notes: reference,
         lines: items.map((item) => ({
           accountId: item.accountId,
           description: item.description || undefined,
@@ -109,8 +106,8 @@ export default function NewInvoicePage() {
             </label>
             <select
               required
-              value={formValues.customerId}
-              onChange={(e) => setFormValues(prev => ({ ...prev, customerId: e.target.value }))}
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
               className="input-base appearance-none font-semibold text-slate-800"
             >
               <option value="">Select a customer...</option>
@@ -130,12 +127,8 @@ export default function NewInvoicePage() {
               type="date"
               required
               autoComplete="off"
-              value={formValues.date}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setFormValues(prev => ({ ...prev, date: e.target.value }));
-                }
-              }}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               className="input-base font-mono"
             />
           </div>
@@ -148,12 +141,8 @@ export default function NewInvoicePage() {
               type="date"
               required
               autoComplete="off"
-              value={formValues.dueDate}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setFormValues(prev => ({ ...prev, dueDate: e.target.value }));
-                }
-              }}
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
               className="input-base font-mono"
             />
           </div>
@@ -165,8 +154,8 @@ export default function NewInvoicePage() {
             <input
               type="text"
               placeholder="e.g. PO-8902"
-              value={formValues.reference}
-              onChange={(e) => setFormValues(prev => ({ ...prev, reference: e.target.value }))}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
               className="input-base font-mono"
             />
           </div>

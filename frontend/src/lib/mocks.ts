@@ -258,6 +258,82 @@ export const handleMockRequest = (method: string, url: string, body?: any): any 
     };
   }
 
+  if (cleanUrl === '/v1/reports/aged-receivables') {
+    return {
+      asOfDate: '2026-06-21',
+      customers: [
+        {
+          customerId: 'cust-1',
+          customerName: 'Acme Corporation',
+          current: '15000.00',
+          days1to30: '0.00',
+          days31to60: '0.00',
+          days61to90: '0.00',
+          days90plus: '0.00',
+          total: '15000.00',
+          invoices: []
+        },
+        {
+          customerId: 'cust-2',
+          customerName: 'Stark Industries',
+          current: '0.00',
+          days1to30: '10000.00',
+          days31to60: '0.00',
+          days61to90: '0.00',
+          days90plus: '0.00',
+          total: '10000.00',
+          invoices: []
+        }
+      ],
+      totals: {
+        current: '15000.00',
+        days1to30: '10000.00',
+        days31to60: '0.00',
+        days61to90: '0.00',
+        days90plus: '0.00',
+        total: '25000.00'
+      }
+    };
+  }
+
+  if (cleanUrl === '/v1/reports/aged-payables') {
+    return {
+      asOfDate: '2026-06-21',
+      vendors: [
+        {
+          vendorId: 'vend-1',
+          vendorName: 'Fresh Supply Co',
+          current: '8000.00',
+          days1to30: '0.00',
+          days31to60: '0.00',
+          days61to90: '0.00',
+          days90plus: '0.00',
+          total: '8000.00',
+          bills: []
+        },
+        {
+          vendorId: 'vend-2',
+          vendorName: 'Apex Hostings',
+          current: '0.00',
+          days1to30: '4500.00',
+          days31to60: '0.00',
+          days61to90: '0.00',
+          days90plus: '0.00',
+          total: '4500.00',
+          bills: []
+        }
+      ],
+      totals: {
+        current: '8000.00',
+        days1to30: '4500.00',
+        days31to60: '0.00',
+        days61to90: '0.00',
+        days90plus: '0.00',
+        total: '12500.00'
+      }
+    };
+  }
+
   if (cleanUrl === '/v1/banking/accounts') {
     return [
       { id: 'bank-1', name: 'Silicon Valley Bank (Checking)', accountNumber: '••••4421', currentBalance: '154039.00' }
