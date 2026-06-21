@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
               <div className="flex flex-col gap-0.5">
                 <Link
-                  href="/profile"
+                  href="/settings/profile"
                   onClick={() => setIsDropdownOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
                 >
