@@ -1,3 +1,5 @@
+import { handleMockRequest } from './mocks';
+
 const API_BASE = '/api';
 
 interface ApiOptions {
@@ -36,6 +38,15 @@ async function request<T>(
   const token = getAuthToken();
   const companyId = getCompanyId();
 
+  // If already in mock mode, bypass actual fetch and use mock db
+  if (token && token.startsWith('mock-token-') && url !== '/v1/auth/login') {
+    try {
+      return handleMockRequest(method, url, body) as T;
+    } catch (e: any) {
+      throw new ApiError(e.message || 'Mock request failed', 400);
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options?.headers,
@@ -49,12 +60,22 @@ async function request<T>(
     headers['X-Company-Id'] = companyId;
   }
 
-  const response = await fetch(`${API_BASE}${url}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    signal: options?.signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${url}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: options?.signal,
+    });
+  } catch (fetchErr) {
+    console.warn('[API Connection Error] Failed to reach backend, falling back to mock database:', fetchErr);
+    try {
+      return handleMockRequest(method, url, body) as T;
+    } catch (mockErr: any) {
+      throw new ApiError('Authentication API offline. Fallback failed: ' + mockErr.message, 503);
+    }
+  }
 
   if (response.status === 401) {
     if (typeof window !== 'undefined') {
@@ -65,11 +86,26 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    // If we get a server-side gateway error (502, 504), fall back to mocks
+    if (response.status >= 500) {
+      console.warn(`[API Server Error ${response.status}] Backend returned error, falling back to mock database`);
+      try {
+        return handleMockRequest(method, url, body) as T;
+      } catch (mockErr) {
+        // Fall through to throw original gateway error if mock fails
+      }
+    }
+
     let errorData: unknown;
     try {
-      errorData = await response.json();
+      const text = await response.text();
+      try {
+        errorData = JSON.parse(text);
+      } catch {
+        errorData = text;
+      }
     } catch {
-      errorData = await response.text();
+      errorData = 'Failed to read error response';
     }
     throw new ApiError(
       (errorData as { message?: string })?.message || `Request failed with status ${response.status}`,
