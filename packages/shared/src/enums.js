@@ -1,0 +1,244 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SubscriptionStatus = exports.SubscriptionPlan = exports.WorkflowTrigger = exports.NotificationType = exports.ApprovalStatus = exports.InvitationStatus = exports.Permission = exports.CompanyRole = exports.WorkspaceRole = exports.FiscalYearStatus = exports.FiscalPeriodStatus = exports.TaxBehavior = exports.TaxType = exports.ReconciliationStatus = exports.BankTransactionType = exports.BankTransactionStatus = exports.JournalPurpose = exports.JournalSourceType = exports.DocumentStatus = exports.NormalBalance = exports.AccountSubType = exports.AccountType = void 0;
+var AccountType;
+(function (AccountType) {
+    AccountType["ASSET"] = "ASSET";
+    AccountType["LIABILITY"] = "LIABILITY";
+    AccountType["EQUITY"] = "EQUITY";
+    AccountType["INCOME"] = "INCOME";
+    AccountType["EXPENSE"] = "EXPENSE";
+})(AccountType || (exports.AccountType = AccountType = {}));
+var AccountSubType;
+(function (AccountSubType) {
+    AccountSubType["CASH_AND_BANK"] = "CASH_AND_BANK";
+    AccountSubType["ACCOUNTS_RECEIVABLE"] = "ACCOUNTS_RECEIVABLE";
+    AccountSubType["CURRENT_ASSET"] = "CURRENT_ASSET";
+    AccountSubType["INVENTORY"] = "INVENTORY";
+    AccountSubType["FIXED_ASSET"] = "FIXED_ASSET";
+    AccountSubType["OTHER_ASSET"] = "OTHER_ASSET";
+    AccountSubType["ACCOUNTS_PAYABLE"] = "ACCOUNTS_PAYABLE";
+    AccountSubType["CURRENT_LIABILITY"] = "CURRENT_LIABILITY";
+    AccountSubType["LONG_TERM_LIABILITY"] = "LONG_TERM_LIABILITY";
+    AccountSubType["CREDIT_CARD"] = "CREDIT_CARD";
+    AccountSubType["OTHER_LIABILITY"] = "OTHER_LIABILITY";
+    AccountSubType["OWNERS_EQUITY"] = "OWNERS_EQUITY";
+    AccountSubType["RETAINED_EARNINGS"] = "RETAINED_EARNINGS";
+    AccountSubType["OPENING_BALANCE"] = "OPENING_BALANCE";
+    AccountSubType["OTHER_EQUITY"] = "OTHER_EQUITY";
+    AccountSubType["SALES_REVENUE"] = "SALES_REVENUE";
+    AccountSubType["OTHER_INCOME"] = "OTHER_INCOME";
+    AccountSubType["COST_OF_GOODS_SOLD"] = "COST_OF_GOODS_SOLD";
+    AccountSubType["OPERATING_EXPENSE"] = "OPERATING_EXPENSE";
+    AccountSubType["PAYROLL_EXPENSE"] = "PAYROLL_EXPENSE";
+    AccountSubType["OTHER_EXPENSE"] = "OTHER_EXPENSE";
+})(AccountSubType || (exports.AccountSubType = AccountSubType = {}));
+var NormalBalance;
+(function (NormalBalance) {
+    NormalBalance["DEBIT"] = "DEBIT";
+    NormalBalance["CREDIT"] = "CREDIT";
+})(NormalBalance || (exports.NormalBalance = NormalBalance = {}));
+var DocumentStatus;
+(function (DocumentStatus) {
+    DocumentStatus["DRAFT"] = "DRAFT";
+    DocumentStatus["PENDING"] = "PENDING";
+    DocumentStatus["SENT"] = "SENT";
+    DocumentStatus["PARTIALLY_PAID"] = "PARTIALLY_PAID";
+    DocumentStatus["PAID"] = "PAID";
+    DocumentStatus["OVERDUE"] = "OVERDUE";
+    DocumentStatus["VOID"] = "VOID";
+    DocumentStatus["CANCELLED"] = "CANCELLED";
+})(DocumentStatus || (exports.DocumentStatus = DocumentStatus = {}));
+var JournalSourceType;
+(function (JournalSourceType) {
+    JournalSourceType["MANUAL"] = "MANUAL";
+    JournalSourceType["INVOICE"] = "INVOICE";
+    JournalSourceType["PAYMENT"] = "PAYMENT";
+    JournalSourceType["CREDIT_NOTE"] = "CREDIT_NOTE";
+    JournalSourceType["BILL"] = "BILL";
+    JournalSourceType["VENDOR_PAYMENT"] = "VENDOR_PAYMENT";
+    JournalSourceType["VENDOR_CREDIT"] = "VENDOR_CREDIT";
+    JournalSourceType["EXPENSE"] = "EXPENSE";
+    JournalSourceType["BANK_TRANSFER"] = "BANK_TRANSFER";
+    JournalSourceType["BANK_FEE"] = "BANK_FEE";
+    JournalSourceType["BANK_INTEREST"] = "BANK_INTEREST";
+    JournalSourceType["INVENTORY_ADJUSTMENT"] = "INVENTORY_ADJUSTMENT";
+    JournalSourceType["DEPRECIATION"] = "DEPRECIATION";
+    JournalSourceType["PAYROLL"] = "PAYROLL";
+    JournalSourceType["TAX_PAYMENT"] = "TAX_PAYMENT";
+    JournalSourceType["OPENING_BALANCE"] = "OPENING_BALANCE";
+    JournalSourceType["YEAR_END_CLOSE"] = "YEAR_END_CLOSE";
+    JournalSourceType["FX_REVALUATION"] = "FX_REVALUATION";
+})(JournalSourceType || (exports.JournalSourceType = JournalSourceType = {}));
+var JournalPurpose;
+(function (JournalPurpose) {
+    JournalPurpose["PRIMARY"] = "PRIMARY";
+    JournalPurpose["COGS"] = "COGS";
+    JournalPurpose["REVERSAL"] = "REVERSAL";
+    JournalPurpose["RECLASSIFICATION"] = "RECLASSIFICATION";
+})(JournalPurpose || (exports.JournalPurpose = JournalPurpose = {}));
+var BankTransactionStatus;
+(function (BankTransactionStatus) {
+    BankTransactionStatus["IMPORTED"] = "IMPORTED";
+    BankTransactionStatus["CATEGORIZED"] = "CATEGORIZED";
+    BankTransactionStatus["MATCHED"] = "MATCHED";
+    BankTransactionStatus["RECONCILED"] = "RECONCILED";
+    BankTransactionStatus["EXCLUDED"] = "EXCLUDED";
+})(BankTransactionStatus || (exports.BankTransactionStatus = BankTransactionStatus = {}));
+var BankTransactionType;
+(function (BankTransactionType) {
+    BankTransactionType["DEBIT"] = "DEBIT";
+    BankTransactionType["CREDIT"] = "CREDIT";
+})(BankTransactionType || (exports.BankTransactionType = BankTransactionType = {}));
+var ReconciliationStatus;
+(function (ReconciliationStatus) {
+    ReconciliationStatus["IN_PROGRESS"] = "IN_PROGRESS";
+    ReconciliationStatus["COMPLETED"] = "COMPLETED";
+})(ReconciliationStatus || (exports.ReconciliationStatus = ReconciliationStatus = {}));
+var TaxType;
+(function (TaxType) {
+    TaxType["OUTPUT"] = "OUTPUT";
+    TaxType["INPUT"] = "INPUT";
+    TaxType["NONE"] = "NONE";
+})(TaxType || (exports.TaxType = TaxType = {}));
+var TaxBehavior;
+(function (TaxBehavior) {
+    TaxBehavior["EXCLUSIVE"] = "EXCLUSIVE";
+    TaxBehavior["INCLUSIVE"] = "INCLUSIVE";
+})(TaxBehavior || (exports.TaxBehavior = TaxBehavior = {}));
+var FiscalPeriodStatus;
+(function (FiscalPeriodStatus) {
+    FiscalPeriodStatus["OPEN"] = "OPEN";
+    FiscalPeriodStatus["SOFT_CLOSE"] = "SOFT_CLOSE";
+    FiscalPeriodStatus["HARD_CLOSE"] = "HARD_CLOSE";
+})(FiscalPeriodStatus || (exports.FiscalPeriodStatus = FiscalPeriodStatus = {}));
+var FiscalYearStatus;
+(function (FiscalYearStatus) {
+    FiscalYearStatus["ACTIVE"] = "ACTIVE";
+    FiscalYearStatus["CLOSED"] = "CLOSED";
+})(FiscalYearStatus || (exports.FiscalYearStatus = FiscalYearStatus = {}));
+var WorkspaceRole;
+(function (WorkspaceRole) {
+    WorkspaceRole["OWNER"] = "OWNER";
+    WorkspaceRole["ADMIN"] = "ADMIN";
+    WorkspaceRole["FIRM_MANAGER"] = "FIRM_MANAGER";
+    WorkspaceRole["MEMBER"] = "MEMBER";
+})(WorkspaceRole || (exports.WorkspaceRole = WorkspaceRole = {}));
+var CompanyRole;
+(function (CompanyRole) {
+    CompanyRole["COMPANY_ADMIN"] = "COMPANY_ADMIN";
+    CompanyRole["ACCOUNTANT"] = "ACCOUNTANT";
+    CompanyRole["BOOKKEEPER"] = "BOOKKEEPER";
+    CompanyRole["APPROVER"] = "APPROVER";
+    CompanyRole["EMPLOYEE"] = "EMPLOYEE";
+    CompanyRole["READ_ONLY_AUDITOR"] = "READ_ONLY_AUDITOR";
+})(CompanyRole || (exports.CompanyRole = CompanyRole = {}));
+var Permission;
+(function (Permission) {
+    Permission["ACCOUNTS_VIEW"] = "accounts.view";
+    Permission["ACCOUNTS_CREATE"] = "accounts.create";
+    Permission["ACCOUNTS_EDIT"] = "accounts.edit";
+    Permission["ACCOUNTS_DELETE"] = "accounts.delete";
+    Permission["JOURNALS_VIEW"] = "journals.view";
+    Permission["JOURNALS_CREATE"] = "journals.create";
+    Permission["JOURNALS_POST"] = "journals.post";
+    Permission["JOURNALS_VOID"] = "journals.void";
+    Permission["FISCAL_VIEW"] = "fiscal.view";
+    Permission["FISCAL_MANAGE"] = "fiscal.manage";
+    Permission["FISCAL_CLOSE"] = "fiscal.close";
+    Permission["CUSTOMERS_VIEW"] = "customers.view";
+    Permission["CUSTOMERS_CREATE"] = "customers.create";
+    Permission["CUSTOMERS_EDIT"] = "customers.edit";
+    Permission["INVOICES_VIEW"] = "invoices.view";
+    Permission["INVOICES_CREATE"] = "invoices.create";
+    Permission["INVOICES_EDIT"] = "invoices.edit";
+    Permission["INVOICES_SEND"] = "invoices.send";
+    Permission["INVOICES_VOID"] = "invoices.void";
+    Permission["PAYMENTS_VIEW"] = "payments.view";
+    Permission["PAYMENTS_CREATE"] = "payments.create";
+    Permission["PAYMENTS_VOID"] = "payments.void";
+    Permission["VENDORS_VIEW"] = "vendors.view";
+    Permission["VENDORS_CREATE"] = "vendors.create";
+    Permission["VENDORS_EDIT"] = "vendors.edit";
+    Permission["BILLS_VIEW"] = "bills.view";
+    Permission["BILLS_CREATE"] = "bills.create";
+    Permission["BILLS_EDIT"] = "bills.edit";
+    Permission["BILLS_APPROVE"] = "bills.approve";
+    Permission["BILLS_VOID"] = "bills.void";
+    Permission["VENDOR_PAYMENTS_VIEW"] = "vendor_payments.view";
+    Permission["VENDOR_PAYMENTS_CREATE"] = "vendor_payments.create";
+    Permission["EXPENSES_VIEW"] = "expenses.view";
+    Permission["EXPENSES_CREATE"] = "expenses.create";
+    Permission["EXPENSES_EDIT"] = "expenses.edit";
+    Permission["EXPENSES_APPROVE"] = "expenses.approve";
+    Permission["BANKING_VIEW"] = "banking.view";
+    Permission["BANKING_IMPORT"] = "banking.import";
+    Permission["BANKING_CATEGORIZE"] = "banking.categorize";
+    Permission["BANKING_RECONCILE"] = "banking.reconcile";
+    Permission["BANK_ACCOUNTS_MANAGE"] = "bank_accounts.manage";
+    Permission["REPORTS_VIEW"] = "reports.view";
+    Permission["REPORTS_EXPORT"] = "reports.export";
+    Permission["COMPANY_SETTINGS"] = "company.settings";
+    Permission["USERS_VIEW"] = "users.view";
+    Permission["USERS_INVITE"] = "users.invite";
+    Permission["USERS_MANAGE"] = "users.manage";
+    Permission["ROLES_MANAGE"] = "roles.manage";
+    Permission["AUDIT_VIEW"] = "audit.view";
+    Permission["DOCUMENTS_VIEW"] = "documents.view";
+    Permission["DOCUMENTS_UPLOAD"] = "documents.upload";
+    Permission["DOCUMENTS_DELETE"] = "documents.delete";
+    Permission["INVENTORY_VIEW"] = "inventory.view";
+    Permission["INVENTORY_MANAGE"] = "inventory.manage";
+    Permission["PROJECTS_VIEW"] = "projects.view";
+    Permission["PROJECTS_MANAGE"] = "projects.manage";
+    Permission["TIME_ENTRIES_VIEW"] = "time_entries.view";
+    Permission["TIME_ENTRIES_MANAGE"] = "time_entries.manage";
+})(Permission || (exports.Permission = Permission = {}));
+var InvitationStatus;
+(function (InvitationStatus) {
+    InvitationStatus["PENDING"] = "PENDING";
+    InvitationStatus["ACCEPTED"] = "ACCEPTED";
+    InvitationStatus["EXPIRED"] = "EXPIRED";
+    InvitationStatus["REVOKED"] = "REVOKED";
+})(InvitationStatus || (exports.InvitationStatus = InvitationStatus = {}));
+var ApprovalStatus;
+(function (ApprovalStatus) {
+    ApprovalStatus["PENDING"] = "PENDING";
+    ApprovalStatus["APPROVED"] = "APPROVED";
+    ApprovalStatus["REJECTED"] = "REJECTED";
+})(ApprovalStatus || (exports.ApprovalStatus = ApprovalStatus = {}));
+var NotificationType;
+(function (NotificationType) {
+    NotificationType["INVOICE_SENT"] = "INVOICE_SENT";
+    NotificationType["INVOICE_PAID"] = "INVOICE_PAID";
+    NotificationType["INVOICE_OVERDUE"] = "INVOICE_OVERDUE";
+    NotificationType["PAYMENT_RECEIVED"] = "PAYMENT_RECEIVED";
+    NotificationType["BILL_DUE"] = "BILL_DUE";
+    NotificationType["APPROVAL_REQUIRED"] = "APPROVAL_REQUIRED";
+    NotificationType["RECONCILIATION_NEEDED"] = "RECONCILIATION_NEEDED";
+    NotificationType["PERIOD_CLOSE_REMINDER"] = "PERIOD_CLOSE_REMINDER";
+    NotificationType["SYSTEM"] = "SYSTEM";
+})(NotificationType || (exports.NotificationType = NotificationType = {}));
+var WorkflowTrigger;
+(function (WorkflowTrigger) {
+    WorkflowTrigger["INVOICE_OVERDUE"] = "INVOICE_OVERDUE";
+    WorkflowTrigger["BILL_OVER_THRESHOLD"] = "BILL_OVER_THRESHOLD";
+    WorkflowTrigger["BANK_TRANSACTION_UNCATEGORIZED"] = "BANK_TRANSACTION_UNCATEGORIZED";
+    WorkflowTrigger["MONTH_END"] = "MONTH_END";
+    WorkflowTrigger["CUSTOM"] = "CUSTOM";
+})(WorkflowTrigger || (exports.WorkflowTrigger = WorkflowTrigger = {}));
+var SubscriptionPlan;
+(function (SubscriptionPlan) {
+    SubscriptionPlan["FREE"] = "FREE";
+    SubscriptionPlan["STARTER"] = "STARTER";
+    SubscriptionPlan["PROFESSIONAL"] = "PROFESSIONAL";
+    SubscriptionPlan["ENTERPRISE"] = "ENTERPRISE";
+})(SubscriptionPlan || (exports.SubscriptionPlan = SubscriptionPlan = {}));
+var SubscriptionStatus;
+(function (SubscriptionStatus) {
+    SubscriptionStatus["ACTIVE"] = "ACTIVE";
+    SubscriptionStatus["PAST_DUE"] = "PAST_DUE";
+    SubscriptionStatus["CANCELLED"] = "CANCELLED";
+    SubscriptionStatus["TRIAL"] = "TRIAL";
+})(SubscriptionStatus || (exports.SubscriptionStatus = SubscriptionStatus = {}));
+//# sourceMappingURL=enums.js.map

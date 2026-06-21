@@ -1,0 +1,390 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
+
+export default function InvoiceDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const [invoice, setInvoice] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [bankAccountId, setBankAccountId] = useState('');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+
+  const fetchInvoice = () => {
+    setLoading(true);
+    api.get<any>(`/v1/invoices/${id}`)
+      .then((res) => {
+        setInvoice(res);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load invoice');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchInvoice();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (showPaymentModal && invoice) {
+      api.get<any[]>('/v1/banking/accounts')
+        .then((res) => {
+          if (res && Array.isArray(res)) {
+            setBankAccounts(res);
+            if (res.length > 0) {
+              setBankAccountId(res[0].id);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load bank accounts:', err);
+          toast.error('Failed to load bank accounts.');
+        });
+      setPaymentAmount(Number(invoice.amountDue));
+    }
+  }, [showPaymentModal]);
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bankAccountId) {
+      toast.error('Please select a deposit account.');
+      return;
+    }
+    if (Number(paymentAmount) <= 0) {
+      toast.error('Payment amount must be greater than zero.');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const payload = {
+        customerId: invoice.customerId,
+        bankAccountId,
+        date: `${paymentDate}T00:00:00Z`,
+        amount: Number(paymentAmount),
+        reference: paymentRef || undefined,
+        allocations: [
+          {
+            invoiceId: invoice.id,
+            amount: Number(paymentAmount),
+          },
+        ],
+      };
+      await api.post('/v1/payments', payload);
+      toast.success('Payment recorded successfully!');
+      setShowPaymentModal(false);
+      fetchInvoice();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to record payment');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePost = async () => {
+    try {
+      setActionLoading(true);
+      await api.post(`/v1/invoices/${id}/post`);
+      toast.success('Invoice posted successfully!');
+      fetchInvoice();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to post invoice');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVoid = async () => {
+    if (!confirm('Are you sure you want to void this invoice? This will reverse all ledger entries.')) {
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await api.post(`/v1/invoices/${id}/void`);
+      toast.success('Invoice voided successfully!');
+      fetchInvoice();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to void invoice');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-12 text-slate-500">Loading invoice details...</div>;
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className="text-center py-12 text-rose-500">
+        <p>{error || 'Invoice not found'}</p>
+        <Link href="/sales/invoices" className="mt-4 inline-block text-brand-600 hover:underline">
+          Back to Invoices
+        </Link>
+      </div>
+    );
+  }
+
+  const status = (invoice.status || 'draft').toLowerCase();
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/sales/invoices"
+            className="p-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-900">{invoice.number}</h1>
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border capitalize ${
+                status === 'paid'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : status === 'overdue'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : status === 'draft'
+                  ? 'bg-slate-100 text-slate-600 border-slate-200'
+                  : status === 'voided'
+                  ? 'bg-red-50 text-red-750 border-red-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {status}
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 mt-0.5">Invoice summary and payment details.</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {status === 'draft' && (
+            <button
+              onClick={handlePost}
+              disabled={actionLoading}
+              className="btn-base bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-sm font-semibold shadow-soft"
+            >
+              Post Invoice
+            </button>
+          )}
+          {(status === 'sent' || status === 'overdue' || status === 'partially_paid') && (
+            <button
+              onClick={handleVoid}
+              disabled={actionLoading}
+              className="btn-base bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 text-sm font-semibold"
+            >
+              Void Invoice
+            </button>
+          )}
+          {(status === 'sent' || status === 'overdue' || status === 'partially_paid') && Number(invoice.amountDue) > 0 && (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              disabled={actionLoading}
+              className="btn-base bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-soft"
+            >
+              Record Payment
+            </button>
+          )}
+          <button
+            onClick={() => window.print()}
+            className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+          >
+            Print Invoice
+          </button>
+        </div>
+      </div>
+
+      {/* Details grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-slate-200 rounded-xl p-6 shadow-soft">
+        <div>
+          <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Bill To</span>
+          <span className="mt-1 block text-sm font-bold text-slate-800">{invoice.customer?.name}</span>
+          <span className="block text-xs text-slate-500 font-mono mt-0.5">{invoice.customer?.email || '-'}</span>
+        </div>
+        <div>
+          <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Date & Term</span>
+          <span className="mt-1 block text-sm text-slate-700">
+            Issued: <span className="font-mono font-semibold">{invoice.date ? new Date(invoice.date).toISOString().split('T')[0] : '-'}</span>
+          </span>
+          <span className="block text-xs text-rose-500 font-semibold mt-0.5">
+            Due: <span className="font-mono">{invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '-'}</span>
+          </span>
+        </div>
+        <div>
+          <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Reference</span>
+          <span className="mt-1 block text-sm font-semibold text-slate-800 font-mono">{invoice.reference || '-'}</span>
+        </div>
+      </div>
+
+      {/* Invoice Table */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="table-header">Description</th>
+                <th className="table-header w-20 text-right">Qty</th>
+                <th className="table-header w-32 text-right">Unit Price</th>
+                <th className="table-header w-20 text-right">Tax Rate</th>
+                <th className="table-header w-32 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(invoice.lines || []).map((line: any, index: number) => {
+                const taxRate = line.taxCode ? Number(line.taxCode.rate) * 100 : 0;
+                return (
+                  <tr key={index} className="hover:bg-slate-50/20 transition-colors">
+                    <td className="table-cell font-medium text-slate-800">{line.description}</td>
+                    <td className="table-cell text-right font-mono">{Number(line.quantity)}</td>
+                    <td className="table-cell text-right font-mono">${Number(line.unitPrice).toFixed(2)}</td>
+                    <td className="table-cell text-right font-mono">{taxRate}%</td>
+                    <td className="table-cell text-right font-mono font-semibold text-slate-850">
+                      ${Number(line.lineTotal).toFixed(2)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Invoice Summary */}
+        <div className="flex justify-end p-6 border-t border-slate-100 bg-slate-50/50">
+          <div className="w-80 space-y-2 font-mono text-sm">
+            <div className="flex justify-between text-slate-500">
+              <span>Subtotal:</span>
+              <span>${Number(invoice.subtotal).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>Tax Total:</span>
+              <span>${Number(invoice.taxTotal).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-base font-bold text-slate-800 pt-2 border-t border-slate-200">
+              <span>Total:</span>
+              <span>${Number(invoice.total).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-slate-500 pt-1">
+              <span>Amount Paid:</span>
+              <span>${Number(invoice.amountPaid).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-rose-500 font-bold">
+              <span>Amount Due:</span>
+              <span>${Number(invoice.amountDue).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Record Customer Payment</h3>
+            <p className="text-xs text-slate-500">Record a payment received for invoice {invoice.number}.</p>
+            
+            <form onSubmit={handleRecordPayment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Deposit Account
+                </label>
+                <select
+                  required
+                  value={bankAccountId}
+                  onChange={(e) => setBankAccountId(e.target.value)}
+                  className="input-base"
+                >
+                  <option value="">Select bank account...</option>
+                  {bankAccounts.map((ba) => (
+                    <option key={ba.id} value={ba.id}>
+                      {ba.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="input-base font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    Amount Received
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                    className="input-base font-mono text-right"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Reference / Memo
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Check #102, Wire transfer"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  className="input-base"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="btn-base bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="btn-base bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 text-sm font-semibold shadow-soft"
+                >
+                  {actionLoading ? 'Recording...' : 'Record Payment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
