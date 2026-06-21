@@ -21,6 +21,16 @@ export const mockUsers = {
     avatarUrl: '',
     emailVerified: true,
   },
+  'admin@ledgerflow.dev': {
+    id: 'admin-id',
+    email: 'admin@ledgerflow.dev',
+    firstName: 'Platform',
+    lastName: 'SuperAdmin',
+    name: 'Platform SuperAdmin',
+    role: 'SUPER_ADMIN',
+    avatarUrl: '',
+    emailVerified: true,
+  },
 };
 
 export const mockCompanies = [

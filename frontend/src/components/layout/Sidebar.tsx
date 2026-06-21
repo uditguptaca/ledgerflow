@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CompanySwitcher } from './CompanySwitcher';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Squares2X2Icon,
   BookOpenIcon,
@@ -29,6 +30,7 @@ import {
   Cog6ToothIcon,
   XMarkIcon,
   ChevronDownIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -125,11 +127,17 @@ const navEntries: NavEntry[] = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
+  const { user } = useAuth();
+  
+  const isSuperAdmin = user?.email === 'admin@ledgerflow.dev';
+  const activeEntries = isSuperAdmin
+    ? [...navEntries, { label: 'Super Admin', href: '/super-admin', icon: SparklesIcon }]
+    : navEntries;
 
   // Expand groups whose basePath matches the current pathname
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    navEntries.forEach((entry) => {
+    activeEntries.forEach((entry) => {
       if (isGroup(entry)) {
         initial[entry.basePath] = pathname.startsWith(entry.basePath);
       }
@@ -191,7 +199,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation items */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 select-none">
-          {navEntries.map((entry) => {
+          {activeEntries.map((entry) => {
             if (isGroup(entry)) {
               const groupExpanded = expanded[entry.basePath] ?? false;
               const groupActive = isGroupActive(entry.basePath);

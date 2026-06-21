@@ -135,6 +135,21 @@ export default function LoginPage() {
             </div>
             <span className="text-xs font-semibold text-brand-600 group-hover:text-brand-700 opacity-80 group-hover:opacity-100 transition-opacity">Autofill</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEmail('admin@ledgerflow.dev');
+              setPassword('SuperAdmin2024!');
+            }}
+            className="w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 p-2.5 rounded transition-all flex justify-between items-center group"
+          >
+            <div>
+              <div className="text-xs font-semibold text-slate-700">Platform Super Admin</div>
+              <div className="text-[11px] text-slate-400 font-mono mt-0.5">admin@ledgerflow.dev</div>
+            </div>
+            <span className="text-xs font-semibold text-brand-600 group-hover:text-brand-700 opacity-80 group-hover:opacity-100 transition-opacity">Autofill</span>
+          </button>
         </div>
       </div>
 
